@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebUI自动化测试练习页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h2 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #718096;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background-color: #f7fafc;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        tr:hover {
+            background-color: #f7fafc;
+        }
+        
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-item, .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .checkbox-item input, .radio-item input {
+            width: auto;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .alert-success {
+            background-color: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background-color: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            position: relative;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress {
+            height: 20px;
+            background-color: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="page-title">WebUI自动化测试练习页面</h1>
+            <p>这个页面包含了各种常见的Web元素，用于练习自动化测试</p>
+        </div>
+        
+        <div class="grid">
+            <!-- 基本表单元素 -->
+            <div class="section">
+                <h2>基本表单元素</h2>
+                <form id="basic-form">
+                    <div class="form-group">
+                        <label for="username">用户名:</label>
+                        <input type="text" id="username" name="username" placeholder="请输入用户名" data-testid="username-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">密码:</label>
+                        <input type="password" id="password" name="password" placeholder="请输入密码" data-testid="password-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">邮箱:</label>
+                        <input type="email" id="email" name="email" placeholder="请输入邮箱" data-testid="email-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="age">年龄:</label>
+                        <input type="number" id="age" name="age" min="1" max="120" data-testid="age-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="birthday">生日:</label>
+                        <input type="date" id="birthday" name="birthday" data-testid="birthday-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="country">国家:</label>
+                        <select id="country" name="country" data-testid="country-select">
+                            <option value="">请选择国家</option>
+                            <option value="china">中国</option>
+                            <option value="usa">美国</option>
+                            <option value="japan">日本</option>
+                            <option value="korea">韩国</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="city">城市:</label>
+                        <select id="city" name="city" data-testid="city-select">
+                            <option value="">请选择城市</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>兴趣爱好:</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="reading" name="hobbies" value="reading" data-testid="hobby-reading">
+                                <label for="reading">阅读</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="music" name="hobbies" value="music" data-testid="hobby-music">
+                                <label for="music">音乐</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="sports" name="hobbies" value="sports" data-testid="hobby-sports">
+                                <label for="sports">运动</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="travel" name="hobbies" value="travel" data-testid="hobby-travel">
+                                <label for="travel">旅行</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>性别:</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="male" name="gender" value="male" data-testid="gender-male">
+                                <label for="male">男</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="female" name="gender" value="female" data-testid="gender-female">
+                                <label for="female">女</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="other" name="gender" value="other" data-testid="gender-other">
+                                <label for="other">其他</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="comments">备注:</label>
+                        <textarea id="comments" name="comments" rows="4" placeholder="请输入备注信息" data-testid="comments-textarea"></textarea>
+                    </div>
+                    
+                    <button type="submit" data-testid="submit-btn">提交</button>
+                    <button type="reset" class="btn-secondary" data-testid="reset-btn">重置</button>
+                </form>
+                
+                <div id="form-alert" class="alert"></div>
+            </div>
+            
+
+            
+            <!-- 按钮和交互 -->
+            <div class="section">
+                <h2>按钮和交互</h2>
+                
+                <button id="alert-btn" data-testid="alert-btn">显示警告</button>
+                <button id="confirm-btn" data-testid="confirm-btn">显示确认</button>
+                <button id="prompt-btn" data-testid="prompt-btn">显示输入</button>
+                <button id="modal-btn" data-testid="modal-btn">打开模态框</button>
+                
+                <br><br>
+                
+                <button id="add-row-btn" data-testid="add-row-btn">添加表格行</button>
+                <button id="remove-row-btn" class="btn-danger" data-testid="remove-row-btn">删除最后一行</button>
+                
+                <br><br>
+                
+                <button id="start-progress-btn" data-testid="start-progress-btn">开始进度条</button>
+                <div class="progress-bar">
+                    <div id="progress" class="progress"></div>
+                </div>
+                <span id="progress-text">0%</span>
+            </div>
+            
+            <!-- 数据表格 -->
+            <div class="section">
+                <h2>数据表格</h2>
+                
+                <table id="data-table" data-testid="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>年龄</th>
+                            <th>城市</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-testid="table-row-1">
+                            <td>1</td>
+                            <td>张三</td>
+                            <td>25</td>
+                            <td>北京</td>
+                            <td><button class="btn-danger delete-btn" data-id="1">删除</button></td>
+                        </tr>
+                        <tr data-testid="table-row-2">
+                            <td>2</td>
+                            <td>李四</td>
+                            <td>30</td>
+                            <td>上海</td>
+                            <td><button class="btn-danger delete-btn" data-id="2">删除</button></td>
+                        </tr>
+                        <tr data-testid="table-row-3">
+                            <td>3</td>
+                            <td>王五</td>
+                            <td>28</td>
+                            <td>广州</td>
+                            <td><button class="btn-danger delete-btn" data-id="3">删除</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 标签页 -->
+        <div class="section">
+            <h2>标签页</h2>
+            
+            <div class="tabs">
+                <button class="tab active" data-tab="tab1" data-testid="tab-1">标签1</button>
+                <button class="tab" data-tab="tab2" data-testid="tab-2">标签2</button>
+                <button class="tab" data-tab="tab3" data-testid="tab-3">标签3</button>
+            </div>
+            
+            <div id="tab1" class="tab-content active" data-testid="tab-content-1">
+                <h3>标签页1内容</h3>
+                <p>这是第一个标签页的内容。可以在这里放置任何内容。</p>
+                <button data-testid="tab1-button">标签1按钮</button>
+            </div>
+            
+            <div id="tab2" class="tab-content" data-testid="tab-content-2">
+                <h3>标签页2内容</h3>
+                <p>这是第二个标签页的内容。包含不同的元素。</p>
+                <input type="text" placeholder="标签2输入框" data-testid="tab2-input">
+            </div>
+            
+            <div id="tab3" class="tab-content" data-testid="tab-content-3">
+                <h3>标签页3内容</h3>
+                <p>这是第三个标签页的内容。</p>
+                <select data-testid="tab3-select">
+                    <option value="option1">选项1</option>
+                    <option value="option2">选项2</option>
+                    <option value="option3">选项3</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 模态框 -->
+    <div id="modal" class="modal" data-testid="modal">
+        <div class="modal-content">
+            <span class="close" data-testid="modal-close">&times;</span>
+            <h2>模态框标题</h2>
+            <p>这是一个模态框的内容。</p>
+            <input type="text" placeholder="模态框输入" data-testid="modal-input">
+            <br><br>
+            <button id="modal-confirm" data-testid="modal-confirm">确认</button>
+            <button id="modal-cancel" class="btn-secondary" data-testid="modal-cancel">取消</button>
+        </div>
+    </div>
+    
+    <script>
+        // 表单提交处理
+        const basicForm = document.getElementById('basic-form');
+        if (basicForm) {
+            basicForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const username = formData.get('username');
+                const email = formData.get('email');
+                
+                const alertDiv = document.getElementById('form-alert');
+                
+                if (!username || !email) {
+                    showAlert('请填写用户名和邮箱', 'error');
+                } else {
+                    showAlert('表单提交成功！', 'success');
+                }
+            });
+        }
+        
+        // 显示警告信息
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('form-alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 按钮事件处理
+        const alertBtn = document.getElementById('alert-btn');
+        if (alertBtn) {
+            alertBtn.addEventListener('click', function() {
+                alert('这是一个警告消息！');
+            });
+        }
+        
+        const confirmBtn = document.getElementById('confirm-btn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                if (confirm('你确定要执行这个操作吗？')) {
+                    showAlert('用户点击了确定', 'success');
+                } else {
+                    showAlert('用户点击了取消', 'error');
+                }
+            });
+        }
+        
+        const promptBtn = document.getElementById('prompt-btn');
+        if (promptBtn) {
+            promptBtn.addEventListener('click', function() {
+                const result = prompt('请输入你的名字：');
+                if (result) {
+                    showAlert(`您好，${result}！`, 'success');
+                }
+            });
+        }
+        
+        // 模态框处理
+        const modal = document.getElementById('modal');
+        const modalBtn = document.getElementById('modal-btn');
+        const closeBtn = document.querySelector('.close');
+        const confirmModalBtn = document.getElementById('modal-confirm');
+        const cancelModalBtn = document.getElementById('modal-cancel');
+        
+        if (modalBtn && modal) {
+            modalBtn.addEventListener('click', function() {
+                modal.style.display = 'block';
+                modal.style.visibility = 'visible';
+            });
+        }
+        
+        if (closeBtn && modal) {
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            });
+        }
+        
+        if (cancelModalBtn && modal) {
+            cancelModalBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            });
+        }
+        
+        if (confirmModalBtn && modal) {
+            confirmModalBtn.addEventListener('click', function() {
+                const input = document.querySelector('[data-testid="modal-input"]');
+                if (input) {
+                    showAlert(`模态框输入：${input.value}`, 'success');
+                }
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            });
+        }
+        
+        window.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            }
+        });
+        
+        // 表格操作
+        let rowCounter = 3;
+        
+        const addRowBtn = document.getElementById('add-row-btn');
+        if (addRowBtn) {
+            addRowBtn.addEventListener('click', function() {
+                rowCounter++;
+                const tbody = document.querySelector('#data-table tbody');
+                if (tbody) {
+                    const newRow = document.createElement('tr');
+                    newRow.setAttribute('data-testid', `table-row-${rowCounter}`);
+                    newRow.innerHTML = `
+                        <td>${rowCounter}</td>
+                        <td>新用户${rowCounter}</td>
+                        <td>${20 + rowCounter}</td>
+                        <td>深圳</td>
+                        <td><button class="btn-danger delete-btn" data-id="${rowCounter}">删除</button></td>
+                    `;
+                    tbody.appendChild(newRow);
+                }
+            });
+        }
+        
+        const removeRowBtn = document.getElementById('remove-row-btn');
+        if (removeRowBtn) {
+            removeRowBtn.addEventListener('click', function() {
+                const tbody = document.querySelector('#data-table tbody');
+                if (tbody) {
+                    const rows = tbody.querySelectorAll('tr');
+                    if (rows.length > 0) {
+                        tbody.removeChild(rows[rows.length - 1]);
+                    }
+                }
+            });
+        }
+        
+        // 删除按钮事件委托
+        const dataTable = document.querySelector('#data-table');
+        if (dataTable) {
+            dataTable.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-btn')) {
+                    const row = e.target.closest('tr');
+                    if (row && confirm('确定要删除这一行吗？')) {
+                        row.remove();
+                    }
+                }
+            });
+        }
+        
+        // 进度条
+        const startProgressBtn = document.getElementById('start-progress-btn');
+        if (startProgressBtn) {
+            startProgressBtn.addEventListener('click', function() {
+                const progress = document.getElementById('progress');
+                const progressText = document.getElementById('progress-text');
+                let width = 0;
+                
+                if (progress && progressText) {
+                    const interval = setInterval(function() {
+                        if (width >= 100) {
+                            clearInterval(interval);
+                            showAlert('进度完成！', 'success');
+                        } else {
+                            width += 2;
+                            progress.style.width = width + '%';
+                            progressText.textContent = width + '%';
+                        }
+                    }, 50);
+                }
+            });
+        }
+        
+        // 标签页切换
+        const tabs = document.querySelectorAll('.tab');
+        if (tabs.length > 0) {
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // 移除所有活动状态
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 添加活动状态
+                    this.classList.add('active');
+                    const targetElement = document.getElementById(targetTab);
+                    if (targetElement) {
+                        targetElement.classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        // 城市数据
+        const cities = {
+            'china': ['北京', '上海', '广州', '深圳'],
+            'usa': ['纽约', '洛杉矶', '芝加哥', '休斯顿'],
+            'japan': ['东京', '大阪', '京都', '横滨'],
+            'korea': ['首尔', '釜山', '仁川', '大邱']
+        };
+        
+        // 国家选择联动
+        const countrySelect = document.getElementById('country');
+        if (countrySelect) {
+            countrySelect.addEventListener('change', function() {
+                const selectedCountry = this.value;
+                const citySelect = document.getElementById('city');
+                
+                if (citySelect) {
+                    // 清空城市选项
+                    citySelect.innerHTML = '<option value="">请选择城市</option>';
+                    
+                    if (selectedCountry && cities[selectedCountry]) {
+                        cities[selectedCountry].forEach(city => {
+                            const option = document.createElement('option');
+                            option.value = city;
+                            option.textContent = city;
+                            citySelect.appendChild(option);
+                        });
+                    }
+                }
+                
+                if (selectedCountry) {
+                    showAlert(`您选择了：${this.options[this.selectedIndex].text}`, 'success');
+                }
+            });
+        }
+        
+        // 复选框变化监听
+        const hobbyCheckboxes = document.querySelectorAll('input[name="hobbies"]');
+        if (hobbyCheckboxes.length > 0) {
+            hobbyCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const checkedHobbies = document.querySelectorAll('input[name="hobbies"]:checked');
+                    const hobbies = Array.from(checkedHobbies).map(cb => {
+                        const label = cb.nextElementSibling;
+                        return label ? label.textContent : '';
+                    }).filter(text => text);
+                    if (hobbies.length > 0) {
+                        showAlert(`您的兴趣爱好：${hobbies.join(', ')}`, 'success');
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

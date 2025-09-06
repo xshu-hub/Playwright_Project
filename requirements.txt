@@ -1,0 +1,33 @@
+# Playwright Web UI Automation Test Framework Dependencies
+
+# Core testing framework
+playwright
+pytest
+pytest-playwright
+
+# Test reporting and documentation
+allure-pytest
+pytest-html
+
+# Parallel execution
+pytest-xdist
+pytest-rerunfailures
+
+# Logging and utilities
+loguru
+pydantic
+
+# Data handling
+pytest-mock
+faker
+
+# Configuration and environment
+python-dotenv
+toml
+# Image and video processing
+Pillow
+opencv-python
+
+# Development and debugging
+
+pytest-sugar

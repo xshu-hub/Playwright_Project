@@ -1,0 +1,355 @@
+name: Playwright Tests CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '测试环境'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+        - test
+        - staging
+        - production
+      browser:
+        description: '浏览器类型'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+        - chromium
+        - firefox
+        - webkit
+        - all
+      test_type:
+        description: '测试类型'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+        - smoke
+        - regression
+        - full
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        python-version: ['3.9', '3.10', '3.11']
+        exclude:
+          # 减少矩阵组合，避免过多的并行任务
+          - browser: webkit
+            python-version: '3.9'
+          - browser: firefox
+            python-version: '3.10'
+    
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'test' }}
+      BROWSER: ${{ matrix.browser }}
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      ALLURE_RESULTS_PATH: allure-results
+      SCREENSHOTS_PATH: screenshots
+      VIDEOS_PATH: videos
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: |
+        playwright install ${{ matrix.browser }}
+        playwright install-deps ${{ matrix.browser }}
+        
+    - name: Create directories
+      run: |
+        mkdir -p ${{ env.ALLURE_RESULTS_PATH }}
+        mkdir -p ${{ env.SCREENSHOTS_PATH }}
+        mkdir -p ${{ env.VIDEOS_PATH }}
+        mkdir -p logs
+        
+    - name: Run smoke tests
+      if: github.event.inputs.test_type == 'smoke' || github.event.inputs.test_type == ''
+      run: |
+        pytest tests/ \
+          --browser=${{ matrix.browser }} \
+          --headed=false \
+          --slowmo=0 \
+          --video=retain-on-failure \
+          --screenshot=only-on-failure \
+          -m "smoke" \
+          --alluredir=${{ env.ALLURE_RESULTS_PATH }} \
+          --html=reports/smoke-report-${{ matrix.browser }}-py${{ matrix.python-version }}.html \
+          --self-contained-html \
+          --maxfail=5 \
+          --tb=short \
+          -v
+          
+    - name: Run regression tests
+      if: github.event.inputs.test_type == 'regression'
+      run: |
+        pytest tests/ \
+          --browser=${{ matrix.browser }} \
+          --headed=false \
+          --slowmo=0 \
+          --video=retain-on-failure \
+          --screenshot=only-on-failure \
+          -m "not ui and not performance" \
+          --alluredir=${{ env.ALLURE_RESULTS_PATH }} \
+          --html=reports/regression-report-${{ matrix.browser }}-py${{ matrix.python-version }}.html \
+          --self-contained-html \
+          --maxfail=10 \
+          --tb=short \
+          -v
+          
+    - name: Run full test suite
+      if: github.event.inputs.test_type == 'full'
+      run: |
+        pytest tests/ \
+          --browser=${{ matrix.browser }} \
+          --headed=false \
+          --slowmo=0 \
+          --video=retain-on-failure \
+          --screenshot=only-on-failure \
+          --alluredir=${{ env.ALLURE_RESULTS_PATH }} \
+          --html=reports/full-report-${{ matrix.browser }}-py${{ matrix.python-version }}.html \
+          --self-contained-html \
+          --maxfail=20 \
+          --tb=short \
+          -v
+          
+    - name: Run default tests (push/PR)
+      if: github.event.inputs.test_type == ''
+      run: |
+        pytest tests/ \
+          --browser=${{ matrix.browser }} \
+          --headed=false \
+          --slowmo=0 \
+          --video=retain-on-failure \
+          --screenshot=only-on-failure \
+          -m "smoke or login" \
+          --alluredir=${{ env.ALLURE_RESULTS_PATH }} \
+          --html=reports/ci-report-${{ matrix.browser }}-py${{ matrix.python-version }}.html \
+          --self-contained-html \
+          --maxfail=5 \
+          --tb=short \
+          -v
+          
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-artifacts-${{ matrix.browser }}-py${{ matrix.python-version }}
+        path: |
+          ${{ env.ALLURE_RESULTS_PATH }}/
+          ${{ env.SCREENSHOTS_PATH }}/
+          ${{ env.VIDEOS_PATH }}/
+          reports/
+          logs/
+        retention-days: 30
+        
+    - name: Upload Allure results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: allure-results-${{ matrix.browser }}-py${{ matrix.python-version }}
+        path: ${{ env.ALLURE_RESULTS_PATH }}
+        retention-days: 30
+
+  # 生成 Allure 报告
+  generate-report:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+        
+    - name: Merge Allure results
+      run: |
+        mkdir -p allure-results
+        find artifacts -name "allure-results-*" -type d -exec cp -r {}/* allure-results/ \;
+        
+    - name: Generate Allure Report
+      uses: simple-elf/allure-report-action@master
+      if: always()
+      with:
+        allure_results: allure-results
+        allure_report: allure-report
+        gh_pages: gh-pages
+        allure_history: allure-history
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: allure-history
+        
+  # 通知任务
+  notify:
+    needs: [test, generate-report]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Calculate test results
+      id: test-results
+      run: |
+        if [[ "${{ needs.test.result }}" == "success" ]]; then
+          echo "status=✅ 成功" >> $GITHUB_OUTPUT
+          echo "color=good" >> $GITHUB_OUTPUT
+        elif [[ "${{ needs.test.result }}" == "failure" ]]; then
+          echo "status=❌ 失败" >> $GITHUB_OUTPUT
+          echo "color=danger" >> $GITHUB_OUTPUT
+        else
+          echo "status=⚠️ 取消" >> $GITHUB_OUTPUT
+          echo "color=warning" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Send notification to Slack
+      uses: 8398a7/action-slack@v3
+      if: always() && env.SLACK_WEBHOOK_URL != ''
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "text": "Playwright 测试完成",
+            "attachments": [{
+              "color": "${{ steps.test-results.outputs.color }}",
+              "fields": [
+                {
+                  "title": "状态",
+                  "value": "${{ steps.test-results.outputs.status }}",
+                  "short": true
+                },
+                {
+                  "title": "分支",
+                  "value": "${{ github.ref_name }}",
+                  "short": true
+                },
+                {
+                  "title": "提交",
+                  "value": "${{ github.sha }}",
+                  "short": true
+                },
+                {
+                  "title": "触发者",
+                  "value": "${{ github.actor }}",
+                  "short": true
+                },
+                {
+                  "title": "报告",
+                  "value": "<https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}|查看 Allure 报告>",
+                  "short": false
+                }
+              ]
+            }]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Send email notification
+      uses: dawidd6/action-send-mail@v3
+      if: always() && failure() && env.MAIL_SERVER != ''
+      with:
+        server_address: ${{ secrets.MAIL_SERVER }}
+        server_port: ${{ secrets.MAIL_PORT }}
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        subject: "Playwright 测试失败 - ${{ github.repository }}"
+        body: |
+          测试执行失败！
+          
+          仓库: ${{ github.repository }}
+          分支: ${{ github.ref_name }}
+          提交: ${{ github.sha }}
+          触发者: ${{ github.actor }}
+          
+          请查看详细日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          Allure 报告: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: "GitHub Actions <noreply@github.com>"
+      env:
+        MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+
+  # 性能测试（可选）
+  performance-test:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_type == 'full' || contains(github.event.head_commit.message, '[perf]')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: |
+        playwright install chromium
+        playwright install-deps chromium
+        
+    - name: Run performance tests
+      run: |
+        pytest tests/ \
+          --browser=chromium \
+          --headed=false \
+          -m "performance" \
+          --alluredir=allure-results \
+          --html=reports/performance-report.html \
+          --self-contained-html \
+          -v
+          
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: |
+          allure-results/
+          reports/
+        retention-days: 30
