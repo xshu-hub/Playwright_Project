@@ -62,18 +62,15 @@ class VideoHelper:
             video_filename = f"{test_prefix}test_{timestamp}.webm"
             self.current_video_path = self.base_path / video_filename
             
-            # 设置录制目录
-            config['dir'] = str(self.base_path)
-            
             # 注意: Playwright 的视频录制需要在创建上下文时配置
-            # 这里主要是记录状态和路径信息
+            # 这里主要是记录状态和路径信息，实际录制由 Playwright 上下文管理
             self.is_recording = True
             
-            logger.info(f"🎥 开始录制视频: {self.current_video_path}")
+            logger.info(f"🎥 视频录制已启用: {self.current_video_path}")
             return True
             
         except Exception as e:
-            logger.error(f"开始录制视频失败: {str(e)}")
+            logger.error(f"启用视频录制失败: {str(e)}")
             return False
     
     def stop_recording(self, save_video: bool = True) -> Optional[str]:

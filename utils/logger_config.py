@@ -62,7 +62,7 @@ class LoggerConfig:
                 sys.stdout,
                 format=console_format,
                 level=log_level,
-                colorize=False  # 禁用颜色避免编码问题
+                colorize=True  # 启用颜色提升开发体验
             )
         
         # 添加文件处理器

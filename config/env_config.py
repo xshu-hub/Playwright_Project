@@ -73,19 +73,56 @@ ENVIRONMENT_CONFIGS: Dict[Environment, EnvironmentConfig] = {
 
 
 class ConfigManager:
-    """配置管理器"""
+    """配置管理器 - 增强版本"""
     
     def __init__(self):
         self._current_env = self._get_current_environment()
         self._config = ENVIRONMENT_CONFIGS[self._current_env]
+        self._validation_rules = self._setup_validation_rules()
+    
+    def _setup_validation_rules(self) -> Dict[str, callable]:
+        """设置配置验证规则"""
+        return {
+            'base_url': lambda x: x.startswith(('http://', 'https://')),
+            'api_base_url': lambda x: x.startswith(('http://', 'https://')) or x == '',
+            'timeout': lambda x: isinstance(x, int) and x > 0,
+            'parallel_workers': lambda x: isinstance(x, int) and 1 <= x <= 20,
+            'retry_times': lambda x: isinstance(x, int) and 0 <= x <= 10,
+            'slow_mo': lambda x: isinstance(x, int) and x >= 0
+        }
+    
+    def _validate_config_value(self, key: str, value: Any) -> bool:
+        """验证配置值"""
+        if key in self._validation_rules:
+            return self._validation_rules[key](value)
+        return True
     
     def _get_current_environment(self) -> Environment:
         """获取当前环境"""
         env_name = os.getenv('TEST_ENV', Environment.TEST.value).lower()
         try:
-            return Environment(env_name)
+            env = Environment(env_name)
+            # 验证环境配置是否存在
+            if env not in ENVIRONMENT_CONFIGS:
+                print(f"警告: 环境 {env_name} 配置不存在，使用默认测试环境")
+                return Environment.TEST
+            return env
         except ValueError:
+            print(f"警告: 未知环境变量值 {env_name}，使用默认测试环境")
             return Environment.TEST
+    
+    def set_environment(self, env: Environment) -> None:
+        """设置当前环境"""
+        if env not in Environment:
+            raise ValueError(f"不支持的环境: {env}")
+        
+        if env not in ENVIRONMENT_CONFIGS:
+            raise ValueError(f"未找到环境配置: {env.value}")
+        
+        old_env = self._current_env
+        self._current_env = env
+        self._config = ENVIRONMENT_CONFIGS[env]
+        print(f"环境已从 {old_env.value} 切换到: {env.value}")
     
     @property
     def current_env(self) -> Environment:
@@ -101,13 +138,40 @@ class ConfigManager:
         """获取指定环境配置"""
         if env is None:
             env = self._current_env
+        
+        if env not in ENVIRONMENT_CONFIGS:
+            raise ValueError(f"未找到环境配置: {env.value}")
+        
         return ENVIRONMENT_CONFIGS[env]
     
     def update_config(self, **kwargs) -> None:
         """更新当前环境配置"""
+        updated_fields = []
+        
         for key, value in kwargs.items():
             if hasattr(self._config, key):
+                # 验证新值
+                if not self._validate_config_value(key, value):
+                    print(f"配置更新失败，验证不通过: {key} = {value}")
+                    continue
+                
+                old_value = getattr(self._config, key)
                 setattr(self._config, key, value)
+                updated_fields.append(f"{key}: {old_value} -> {value}")
+            else:
+                print(f"警告: 未知配置项: {key}")
+        
+        if updated_fields:
+            print(f"配置已更新: {', '.join(updated_fields)}")
+    
+    def validate_current_config(self) -> bool:
+        """验证当前配置有效性"""
+        config_dict = self._config.dict()
+        for key, value in config_dict.items():
+            if not self._validate_config_value(key, value):
+                print(f"配置验证失败: {key} = {value}")
+                return False
+        return True
     
     def get_base_url(self) -> str:
         """获取基础URL"""
@@ -140,6 +204,17 @@ class ConfigManager:
     def get_retry_times(self) -> int:
         """获取重试次数"""
         return self._config.retry_times
+    
+    def get_all_environments(self) -> list:
+        """获取所有可用环境"""
+        return [env.value for env in Environment]
+    
+    def export_config(self) -> Dict[str, Any]:
+        """导出当前配置"""
+        return {
+            'environment': self._current_env.value,
+            'config': self._config.dict()
+        }
 
 
 # 全局配置管理器实例

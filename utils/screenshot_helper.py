@@ -35,6 +35,7 @@ class ScreenshotHelper:
         description: str = "",
         full_page: bool = True,
         element_selector: Optional[str] = None,
+        quality: int = 80,
         **kwargs
     ) -> Optional[str]:
         """
@@ -45,19 +46,27 @@ class ScreenshotHelper:
             description: 截图描述
             full_page: 是否截取整个页面
             element_selector: 元素选择器，如果提供则只截取该元素
+            quality: 截图质量 (1-100)
             **kwargs: 其他截图参数
             
         Returns:
             截图文件路径，失败返回 None
         """
         try:
+            # 检查页面状态
+            if hasattr(self.page, 'is_closed') and self.page.is_closed():
+                logger.warning("页面已关闭，无法截图")
+                return None
+            
             # 生成文件名
             if not filename:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]
                 filename = f"screenshot_{timestamp}.png"
             
-            # 确保文件名有正确的扩展名
-            if not filename.endswith(('.png', '.jpg', '.jpeg')):
+            # 根据质量设置确定文件格式
+            if quality < 100 and not filename.endswith(('.png', '.jpg', '.jpeg')):
+                filename = filename.rsplit('.', 1)[0] + '.jpg' if '.' in filename else filename + '.jpg'
+            elif not filename.endswith(('.png', '.jpg', '.jpeg')):
                 filename += '.png'
             
             # 完整文件路径
@@ -68,11 +77,22 @@ class ScreenshotHelper:
             screenshot_config['full_page'] = full_page
             screenshot_config['path'] = str(file_path)
             
+            # 设置图片质量和格式
+            if quality < 100:
+                screenshot_config['type'] = 'jpeg'
+                screenshot_config['quality'] = quality
+            
+            # 添加超时设置
+            if 'timeout' not in screenshot_config:
+                screenshot_config['timeout'] = 30000  # 30秒超时
+            
             # 截图
             if element_selector:
                 # 截取特定元素
                 element = self.page.locator(element_selector)
                 if element.count() > 0:
+                    # 等待元素可见
+                    element.wait_for(state='visible', timeout=5000)
                     element.screenshot(**screenshot_config)
                 else:
                     logger.warning(f"未找到元素: {element_selector}，改为截取整页")
@@ -83,7 +103,7 @@ class ScreenshotHelper:
             
             # 记录日志
             desc_str = f" - {description}" if description else ""
-            logger.info(f"📸 截图已保存: {file_path}{desc_str}")
+            logger.info(f"📸 截图已保存: {file_path}{desc_str} (质量: {quality})")
             
             return str(file_path)
             

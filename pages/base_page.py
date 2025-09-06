@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Any, Union
 from playwright.sync_api import Page, Locator, expect
 from loguru import logger
+import allure
 
 from utils.screenshot_helper import ScreenshotHelper
 from utils.logger_config import logger_config
@@ -341,6 +342,49 @@ class BasePage(ABC):
             logger.error(f"等待元素失败: {selector}, 状态: {state}, 错误: {str(e)}")
             raise
     
+    def wait_for_element_stable(self, selector: str, stable_time: int = 500, timeout: int = None) -> Locator:
+        """
+        等待元素稳定(位置和大小不再变化)
+        
+        Args:
+            selector: 元素选择器
+            stable_time: 稳定时间(毫秒)
+            timeout: 超时时间
+            
+        Returns:
+            元素定位器
+        """
+        timeout = timeout or self.timeout
+        try:
+            element = self.page.locator(selector)
+            # 先等待元素可见
+            element.wait_for(state="visible", timeout=timeout)
+            
+            # 等待元素位置稳定
+            last_box = None
+            stable_start = None
+            
+            while True:
+                current_box = element.bounding_box()
+                current_time = time.time() * 1000
+                
+                if last_box == current_box:
+                    if stable_start is None:
+                        stable_start = current_time
+                    elif current_time - stable_start >= stable_time:
+                        break
+                else:
+                    stable_start = None
+                    last_box = current_box
+                
+                time.sleep(0.1)
+                
+            logger.debug(f"元素已稳定: {selector}")
+            return element
+        except Exception as e:
+            logger.error(f"等待元素稳定失败: {selector}, 错误: {str(e)}")
+            raise
+    
     def wait_for_text(self, selector: str, text: str, timeout: int = None) -> bool:
         """
         等待元素包含指定文本
@@ -553,3 +597,53 @@ class BasePage(ABC):
         logger.debug(f"等待 {seconds} 秒")
         time.sleep(seconds)
         return self
+    
+    def smart_wait(self, condition_func, timeout: int = None, poll_interval: float = 0.5) -> 'BasePage':
+        """
+        智能等待，基于条件函数
+        
+        Args:
+            condition_func: 条件函数，返回True时停止等待
+            timeout: 超时时间(毫秒)
+            poll_interval: 轮询间隔(秒)
+            
+        Returns:
+            页面实例
+        """
+        timeout = timeout or self.timeout
+        start_time = time.time() * 1000
+        
+        while True:
+            try:
+                if condition_func():
+                    logger.debug("智能等待条件满足")
+                    return self
+            except Exception:
+                pass
+            
+            current_time = time.time() * 1000
+            if current_time - start_time >= timeout:
+                logger.error("智能等待超时")
+                raise TimeoutError(f"智能等待超时: {timeout}ms")
+            
+            time.sleep(poll_interval)
+    
+    def wait_for_network_idle(self, timeout: int = None, idle_time: int = 500) -> 'BasePage':
+        """
+        等待网络空闲
+        
+        Args:
+            timeout: 超时时间
+            idle_time: 空闲时间(毫秒)
+            
+        Returns:
+            页面实例
+        """
+        timeout = timeout or self.long_timeout
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=timeout)
+            logger.debug("网络已空闲")
+            return self
+        except Exception as e:
+            logger.warning(f"等待网络空闲超时: {str(e)}")
+            return self

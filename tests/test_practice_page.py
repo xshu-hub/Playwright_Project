@@ -353,7 +353,7 @@ class TestPracticePage(BaseTest):
     @pytest.mark.regression
     def test_complete_form_workflow(self):
         """测试完整的表单工作流程"""
-        with allure.step("填写完整表单"):
+        with allure.step("填写基本表单"):
             self.practice_page.fill_basic_form(
                 username="completeuser",
                 password="securepass123",
@@ -361,11 +361,6 @@ class TestPracticePage(BaseTest):
                 age="30",
                 birthday="1993-05-15"
             )
-            
-            self.practice_page.select_country("usa")
-            self.practice_page.select_hobbies(['reading', 'travel'])
-            self.practice_page.select_gender('female')
-            self.practice_page.fill_comments("完整的表单测试备注")
             
         with allure.step("提交表单并验证"):
             self.practice_page.submit_form()

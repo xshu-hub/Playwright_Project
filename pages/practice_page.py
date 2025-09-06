@@ -21,42 +21,42 @@ class PracticePage(BasePage):
         super().__init__(page)
         self.page_url = "/practice_page.html"
         
-        # 基本表单元素
-        self.username_input = "[data-testid='username-input']"
-        self.password_input = "[data-testid='password-input']"
-        self.email_input = "[data-testid='email-input']"
-        self.age_input = "[data-testid='age-input']"
-        self.birthday_input = "[data-testid='birthday-input']"
-        self.submit_btn = "[data-testid='submit-btn']"
-        self.reset_btn = "[data-testid='reset-btn']"
+        # 基本表单元素 - 使用多重选择器策略提高稳定性
+        self.username_input = "[data-testid='username-input'], input[name='username'], #username"
+        self.password_input = "[data-testid='password-input'], input[name='password'], #password"
+        self.email_input = "[data-testid='email-input'], input[name='email'], #email"
+        self.age_input = "[data-testid='age-input'], input[name='age'], #age"
+        self.birthday_input = "[data-testid='birthday-input'], input[name='birthday'], #birthday"
+        self.submit_btn = "[data-testid='submit-btn'], button[type='submit'], input[type='submit']"
+        self.reset_btn = "[data-testid='reset-btn'], button[type='reset'], input[type='reset']"
         
-        # 选择元素
-        self.country_select = "[data-testid='country-select']"
-        self.hobby_reading = "[data-testid='hobby-reading']"
-        self.hobby_music = "[data-testid='hobby-music']"
-        self.hobby_sports = "[data-testid='hobby-sports']"
-        self.hobby_travel = "[data-testid='hobby-travel']"
-        self.gender_male = "[data-testid='gender-male']"
-        self.gender_female = "[data-testid='gender-female']"
-        self.gender_other = "[data-testid='gender-other']"
-        self.comments_textarea = "[data-testid='comments-textarea']"
+        # 选择元素 - 添加备用选择器
+        self.country_select = "[data-testid='country-select'], select[name='country'], #country"
+        self.hobby_reading = "[data-testid='hobby-reading'], input[value='reading'], #hobby-reading"
+        self.hobby_music = "[data-testid='hobby-music'], input[value='music'], #hobby-music"
+        self.hobby_sports = "[data-testid='hobby-sports'], input[value='sports'], #hobby-sports"
+        self.hobby_travel = "[data-testid='hobby-travel'], input[value='travel'], #hobby-travel"
+        self.gender_male = "[data-testid='gender-male'], input[value='male'], #gender-male"
+        self.gender_female = "[data-testid='gender-female'], input[value='female'], #gender-female"
+        self.gender_other = "[data-testid='gender-other'], input[value='other'], #gender-other"
+        self.comments_textarea = "[data-testid='comments-textarea'], textarea[name='comments'], #comments"
         
-        # 按钮和交互
-        self.alert_btn = "[data-testid='alert-btn']"
-        self.confirm_btn = "[data-testid='confirm-btn']"
-        self.prompt_btn = "[data-testid='prompt-btn']"
-        self.modal_btn = "[data-testid='modal-btn']"
-        self.add_row_btn = "[data-testid='add-row-btn']"
-        self.remove_row_btn = "[data-testid='remove-row-btn']"
-        self.start_progress_btn = "[data-testid='start-progress-btn']"
+        # 按钮和交互 - 增强选择器稳定性
+        self.alert_btn = "[data-testid='alert-btn'], button:has-text('Alert'), #alert-btn"
+        self.confirm_btn = "[data-testid='confirm-btn'], button:has-text('Confirm'), #confirm-btn"
+        self.prompt_btn = "[data-testid='prompt-btn'], button:has-text('Prompt'), #prompt-btn"
+        self.modal_btn = "[data-testid='modal-btn'], button:has-text('Modal'), #modal-btn"
+        self.add_row_btn = "[data-testid='add-row-btn'], button:has-text('Add Row'), #add-row-btn"
+        self.remove_row_btn = "[data-testid='remove-row-btn'], button:has-text('Remove Row'), #remove-row-btn"
+        self.start_progress_btn = "[data-testid='start-progress-btn'], button:has-text('Start Progress'), #start-progress-btn"
         
-        # 表格
-        self.data_table = "[data-testid='data-table']"
-        self.table_row_1 = "[data-testid='table-row-1']"
-        self.table_row_2 = "[data-testid='table-row-2']"
-        self.table_row_3 = "[data-testid='table-row-3']"
+        # 表格 - 使用更通用的选择器
+        self.data_table = "[data-testid='data-table'], table.data-table, #data-table"
+        self.table_row_1 = "[data-testid='table-row-1'], tr:nth-child(1), #table-row-1"
+        self.table_row_2 = "[data-testid='table-row-2'], tr:nth-child(2), #table-row-2"
+        self.table_row_3 = "[data-testid='table-row-3'], tr:nth-child(3), #table-row-3"
         
-        # 标签页
+        # 标签页 - 使用更精确的选择器
         self.tab_1 = "[data-testid='tab-1']"
         self.tab_2 = "[data-testid='tab-2']"
         self.tab_3 = "[data-testid='tab-3']"
@@ -67,18 +67,18 @@ class PracticePage(BasePage):
         self.tab2_input = "[data-testid='tab2-input']"
         self.tab3_select = "[data-testid='tab3-select']"
         
-        # 模态框
-        self.modal = "[data-testid='modal']"
-        self.modal_close = "[data-testid='modal-close']"
-        self.modal_input = "[data-testid='modal-input']"
-        self.modal_confirm = "[data-testid='modal-confirm']"
-        self.modal_cancel = "[data-testid='modal-cancel']"
+        # 模态框 - 提供多种定位方式
+        self.modal = "[data-testid='modal'], .modal, #modal"
+        self.modal_close = "[data-testid='modal-close'], .modal-close, button:has-text('Close')"
+        self.modal_input = "[data-testid='modal-input'], .modal input, #modal-input"
+        self.modal_confirm = "[data-testid='modal-confirm'], .modal button:has-text('Confirm'), #modal-confirm"
+        self.modal_cancel = "[data-testid='modal-cancel'], .modal button:has-text('Cancel'), #modal-cancel"
         
-        # 其他元素
-        self.page_title = "#page-title"
-        self.form_alert = "#form-alert"
-        self.progress = "#progress"
-        self.progress_text = "#progress-text"
+        # 其他元素 - 保持原有选择器并添加备用
+        self.page_title = "#page-title, .page-title, h1"
+        self.form_alert = "#form-alert, .form-alert, .alert"
+        self.progress = "#progress, .progress, progress"
+        self.progress_text = "#progress-text, .progress-text, .progress-label"
     
     @allure.step("填写基本表单")
     def fill_basic_form(self, username: str, password: str, email: str, age: str = None, birthday: str = None):
@@ -261,9 +261,10 @@ class PracticePage(BasePage):
     @allure.step("验证表单警告信息")
     def verify_form_alert(self, expected_message: str):
         """验证表单警告信息"""
-        self.wait_for_element(self.form_alert, "visible")
-        actual_message = self.get_text(self.form_alert)
-        expect(self.page.locator(self.form_alert)).to_contain_text(expected_message)
+        alert_selector = "#form-alert"
+        self.wait_for_element(alert_selector, "visible", timeout=10000)
+        actual_message = self.get_text(alert_selector)
+        expect(self.page.locator(alert_selector)).to_contain_text(expected_message)
         print(f"验证警告信息: {actual_message}")
     
     @allure.step("验证模态框可见性")

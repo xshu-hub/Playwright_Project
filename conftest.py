@@ -192,34 +192,42 @@ def pytest_runtest_makereport(item, call):
         if rep.failed:
             print(f"测试失败: {item.nodeid}")
             
-            # 安全地处理截图和视频
+            # 安全地处理截图和视频，添加线程安全机制
             try:
-                if page:
+                if page and hasattr(page, 'is_closed') and not page.is_closed():
                     # 快速截图 - 添加超时控制
                     try:
                         import time
+                        import threading
                         
-                        start_time = time.time()
+                        # 使用锁确保线程安全
+                        screenshot_lock = getattr(pytest_runtest_makereport, '_screenshot_lock', None)
+                        if screenshot_lock is None:
+                            screenshot_lock = threading.Lock()
+                            pytest_runtest_makereport._screenshot_lock = screenshot_lock
                         
-                        # 获取当前会话目录
-                        global current_session_dir
-                        session_dir = current_session_dir if current_session_dir else Path('reports')
-                        screenshot_path = session_dir / 'screenshots' / f"{item.nodeid.replace('::', '_').replace('/', '_')}_failure.png"
-                        
-                        # 使用超时控制截图
-                        if hasattr(page, 'screenshot'):
-                            page.screenshot(path=screenshot_path, timeout=3000)  # 3秒超时
-                            print(f"失败截图已保存: {screenshot_path}")
+                        with screenshot_lock:
+                            start_time = time.time()
                             
-                            # 添加到Allure报告
-                            try:
-                                import allure
-                                allure.attach.file(screenshot_path, name="失败截图", attachment_type=allure.attachment_type.PNG)
-                            except Exception as e:
-                                print(f"Allure截图附件添加失败: {e}")
+                            # 获取当前会话目录
+                            global current_session_dir
+                            session_dir = current_session_dir if current_session_dir else Path('reports')
+                            screenshot_path = session_dir / 'screenshots' / f"{item.nodeid.replace('::', '_').replace('/', '_')}_failure.png"
+                            
+                            # 使用超时控制截图
+                            if hasattr(page, 'screenshot'):
+                                page.screenshot(path=screenshot_path, timeout=3000)  # 3秒超时
+                                print(f"失败截图已保存: {screenshot_path}")
                                 
-                        elapsed = time.time() - start_time
-                        print(f"截图处理耗时: {elapsed:.2f}秒")
+                                # 添加到Allure报告
+                                try:
+                                    import allure
+                                    allure.attach.file(screenshot_path, name="失败截图", attachment_type=allure.attachment_type.PNG)
+                                except Exception as e:
+                                    print(f"Allure截图附件添加失败: {e}")
+                                    
+                            elapsed = time.time() - start_time
+                            print(f"截图处理耗时: {elapsed:.2f}秒")
                         
                     except Exception as e:
                         print(f"截图处理失败: {e}")

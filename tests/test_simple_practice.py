@@ -158,4 +158,4 @@ class TestSimplePractice:
         
         expect(page.locator("[data-testid='username-input']")).to_have_value("")
         expect(page.locator("[data-testid='email-input']")).to_have_value("")
-        expect(page.locator("[data-testid='hobby-reading']")).to_be_checked() # 错误，应该是not_to_be_checked()
+        expect(page.locator("[data-testid='hobby-reading']")).not_to_be_checked()
