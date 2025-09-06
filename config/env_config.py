@@ -3,21 +3,21 @@ import os
 from enum import Enum
 from typing import Dict, Any
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+# 加载.env文件
+load_dotenv()
 
 
 class Environment(str, Enum):
     """环境枚举"""
-    DEV = "dev"
     TEST = "test"
-    STAGING = "staging"
     PROD = "prod"
 
 
 class EnvironmentConfig(BaseModel):
     """环境配置模型"""
     name: str
-    base_url: str
-    api_base_url: str = ""
     timeout: int = Field(default=30000, description="默认超时时间(毫秒)")
     headless: bool = Field(default=True, description="是否无头模式")
     slow_mo: int = Field(default=0, description="慢动作延迟(毫秒)")
@@ -32,38 +32,15 @@ class EnvironmentConfig(BaseModel):
 
 # 环境配置字典
 ENVIRONMENT_CONFIGS: Dict[Environment, EnvironmentConfig] = {
-    Environment.DEV: EnvironmentConfig(
-        name="开发环境",
-        base_url="http://localhost:3000",
-        api_base_url="http://localhost:8000/api",
-        headless=False,
-        slow_mo=500,
-        video_record=True,
-        parallel_workers=2
-    ),
-    
     Environment.TEST: EnvironmentConfig(
         name="测试环境",
-        base_url="https://test.example.com",
-        api_base_url="https://test-api.example.com/api",
         headless=True,
         video_record=True,
         parallel_workers=4
     ),
     
-    Environment.STAGING: EnvironmentConfig(
-        name="预发布环境",
-        base_url="https://staging.example.com",
-        api_base_url="https://staging-api.example.com/api",
-        headless=True,
-        video_record=False,
-        parallel_workers=6
-    ),
-    
     Environment.PROD: EnvironmentConfig(
         name="生产环境",
-        base_url="https://www.example.com",
-        api_base_url="https://api.example.com/api",
         headless=True,
         video_record=False,
         parallel_workers=8,
@@ -73,8 +50,8 @@ ENVIRONMENT_CONFIGS: Dict[Environment, EnvironmentConfig] = {
 
 
 class ConfigManager:
-    """配置管理器 - 增强版本"""
-    
+    """配置管理器"""
+
     def __init__(self):
         self._current_env = self._get_current_environment()
         self._config = ENVIRONMENT_CONFIGS[self._current_env]
@@ -83,8 +60,6 @@ class ConfigManager:
     def _setup_validation_rules(self) -> Dict[str, callable]:
         """设置配置验证规则"""
         return {
-            'base_url': lambda x: x.startswith(('http://', 'https://')),
-            'api_base_url': lambda x: x.startswith(('http://', 'https://')) or x == '',
             'timeout': lambda x: isinstance(x, int) and x > 0,
             'parallel_workers': lambda x: isinstance(x, int) and 1 <= x <= 20,
             'retry_times': lambda x: isinstance(x, int) and 0 <= x <= 10,
@@ -173,13 +148,7 @@ class ConfigManager:
                 return False
         return True
     
-    def get_base_url(self) -> str:
-        """获取基础URL"""
-        return self._config.base_url
-    
-    def get_api_base_url(self) -> str:
-        """获取API基础URL"""
-        return self._config.api_base_url
+
     
     def is_headless(self) -> bool:
         """是否无头模式"""
@@ -197,8 +166,23 @@ class ConfigManager:
         """失败时是否截图"""
         return self._config.screenshot_on_failure
     
-    def get_parallel_workers(self) -> int:
+    def get_parallel_workers(self):
         """获取并行工作进程数"""
+        # 优先使用环境变量PARALLEL_WORKERS
+        env_workers = os.getenv('PARALLEL_WORKERS')
+        if env_workers:
+            # 处理特殊值
+            if env_workers.lower() == 'auto':
+                return 'auto'
+            try:
+                workers = int(env_workers)
+                if workers <= 0:
+                    return 'auto'
+                return workers
+            except ValueError:
+                print(f"警告: PARALLEL_WORKERS环境变量值无效 '{env_workers}'，使用默认配置")
+        
+        # 使用配置文件中的默认值
         return self._config.parallel_workers
     
     def get_retry_times(self) -> int:

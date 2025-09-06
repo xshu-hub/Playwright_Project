@@ -4,11 +4,10 @@ import os
 from typing import Dict, List, Any, Optional
 
 # 环境变量配置
-ENV = os.getenv('TEST_ENV', 'dev')
+ENV = os.getenv('TEST_ENV', 'test')
 CI_MODE = os.getenv('CI', 'false').lower() == 'true'
 
 # 基础配置
-BASE_URL = os.getenv('BASE_URL', 'https://rahulshettyacademy.com/AutomationPractice/')
 HEADLESS = os.getenv('HEADLESS', 'false' if not CI_MODE else 'true').lower() == 'true'
 BROWSER_TIMEOUT = int(os.getenv('BROWSER_TIMEOUT', '30000'))
 NAVIGATION_TIMEOUT = int(os.getenv('NAVIGATION_TIMEOUT', '60000'))
@@ -77,7 +76,18 @@ SCREENSHOT_CONFIG = {
 }
 
 # 并行测试配置
-PARALLEL_WORKERS = int(os.getenv('PARALLEL_WORKERS', '4'))
+def _get_parallel_workers():
+    """获取并行工作进程数，支持auto值"""
+    env_workers = os.getenv('PARALLEL_WORKERS', '4')
+    if env_workers.lower() == 'auto':
+        return 'auto'
+    try:
+        return int(env_workers)
+    except ValueError:
+        print(f"警告: PARALLEL_WORKERS环境变量值无效 '{env_workers}'，使用默认值4")
+        return 4
+
+PARALLEL_WORKERS = _get_parallel_workers()
 
 # 重试配置
 RETRY_CONFIG = {
@@ -86,34 +96,28 @@ RETRY_CONFIG = {
     'retry_on_failure': os.getenv('RETRY_ON_FAILURE', 'true').lower() == 'true'
 }
 
-# 环境特定配置
-ENV_CONFIGS = {
-    'dev': {
-        'base_url': 'https://rahulshettyacademy.com/AutomationPractice/',
-        'headless': False,
-        'slow_mo': 500
-    },
-    'test': {
-        'base_url': 'https://test.rahulshettyacademy.com/AutomationPractice/',
-        'headless': True,
-        'slow_mo': 100
-    },
-    'prod': {
-        'base_url': 'https://rahulshettyacademy.com/AutomationPractice/',
-        'headless': True,
-        'slow_mo': 0
-    }
-}
+# 环境特定配置已移至 env_config.py 统一管理
+# ENV_CONFIGS 已废弃，请使用 config.env_config.config_manager
 
 # 获取当前环境配置
 def get_env_config() -> Dict[str, Any]:
-    return ENV_CONFIGS.get(ENV, ENV_CONFIGS['dev'])
+    """获取当前环境配置"""
+    from config.env_config import config_manager
+    env_config = config_manager.config
+    return {
+        'headless': env_config.headless,
+        'slow_mo': env_config.slow_mo,
+        'timeout': env_config.timeout,
+        'video_record': env_config.video_record,
+        'screenshot_on_failure': env_config.screenshot_on_failure,
+        'parallel_workers': env_config.parallel_workers,
+        'retry_times': env_config.retry_times
+    }
 
 # 主配置字典
 PLAYWRIGHT_CONFIG = {
     'env': ENV,
     'ci_mode': CI_MODE,
-    'base_url': BASE_URL,
     'headless': HEADLESS,
     'slow_mo': SLOW_MO,
     'browser_timeout': BROWSER_TIMEOUT,
@@ -126,8 +130,7 @@ PLAYWRIGHT_CONFIG = {
     'default_browser': DEFAULT_BROWSER,
     'screenshot_config': SCREENSHOT_CONFIG,
     'parallel_workers': PARALLEL_WORKERS,
-    'retry_config': RETRY_CONFIG,
-    'env_configs': ENV_CONFIGS
+    'retry_config': RETRY_CONFIG
 }
 
 # 配置工具函数

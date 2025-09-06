@@ -425,12 +425,3 @@ class BaseTest(ABC):
             allure.attach(content, name=name, attachment_type=attachment_type)
         except Exception as e:
             print(f"添加 Allure 附件失败: {str(e)}")
-    
-    def get_base_url(self) -> str:
-        """
-        获取基础 URL
-        
-        Returns:
-            基础 URL
-        """
-        return config_manager.get_base_url()

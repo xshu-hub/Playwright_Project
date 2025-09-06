@@ -105,6 +105,7 @@ def pytest_configure(config):
     print(f"当前测试会话目录: {test_session_dir}")
     print(f"浏览器: {PLAYWRIGHT_CONFIG['default_browser']}")
     print(f"无头模式: {PLAYWRIGHT_CONFIG['browser_config']['headless']}")
+    print("-" * 50)
 
 
 def pytest_unconfigure(config):
@@ -168,15 +169,6 @@ def screenshot_helper(page: Page):
     return ScreenshotHelper(page, f"{session_dir}/screenshots")
 
 
-# 临时禁用失败处理钩子来调试卡住问题
-# @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-# def pytest_runtest_makereport(item, call):
-#     """测试报告钩子 - 用于失败截图和视频 - 临时禁用"""
-#     outcome = yield
-#     rep = outcome.get_result()
-#     print(f"测试钩子被调用: {rep.when}, 失败状态: {rep.failed}")
-    
-# 改进的失败处理钩子 - 带超时和异常处理，只保留失败测试的视频
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """测试报告钩子 - 安全的失败截图和视频处理"""
@@ -257,7 +249,6 @@ def pytest_runtest_makereport(item, call):
                     # 标记视频为待删除（在上下文关闭后删除）
                     if not hasattr(item, '_video_should_be_deleted'):
                         item._video_should_be_deleted = True
-                        print("测试通过，视频将在测试完成后删除")
             except Exception as e:
                 print(f"视频删除标记失败: {e}")
 
