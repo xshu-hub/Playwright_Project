@@ -17,8 +17,12 @@ from config.env_config import config_manager
 from utils.logger_config import logger_config
 from utils.screenshot_helper import ScreenshotHelper
 
-# 禁用loguru日志以避免I/O错误
-# logger_config.setup_logger()
+# 初始化日志配置
+logger_config.setup_logger(
+    level="INFO",
+    console_output=True,
+    file_output=True
+)
 
 
 # 全局变量存储当前会话目录
@@ -256,10 +260,22 @@ def pytest_runtest_makereport(item, call):
 @pytest.fixture(autouse=True)
 def test_logger(request):
     """自动记录测试开始和结束，并处理视频清理"""
+    from loguru import logger
     test_name = request.node.name
+    
+    # 记录测试开始
+    logger_config.log_test_start(test_name)
     print(f"开始执行测试: {test_name}")
     
     def fin():
+        # 记录测试结束
+        test_result = "PASSED"
+        if hasattr(request.node, 'rep_call') and request.node.rep_call.failed:
+            test_result = "FAILED"
+        elif hasattr(request.node, 'rep_call') and request.node.rep_call.skipped:
+            test_result = "SKIPPED"
+            
+        logger_config.log_test_end(test_name, test_result)
         print(f"测试执行完成: {test_name}")
         
         # 处理失败测试的视频 - 添加到Allure报告

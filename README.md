@@ -1,1994 +1,1921 @@
-# Playwright-Pytest-Allure Web UI 自动化测试框架
+# Playwright 自动化测试框架
 
-基于 Playwright、Pytest 和 Allure 的现代化 Web UI 自动化测试框架，提供完整的测试基础架构和工具集。
+一个基于 Playwright 和 Python 的现代化 Web 自动化测试框架，采用 Page Object Model (POM) 设计模式，提供高效、可维护的测试解决方案。
 
 ## 📋 目录
 
-- [版本更新](#-版本更新)
-- [核心特性](#-核心特性)
-- [框架整体架构](#-框架整体架构)
-- [项目结构](#-项目结构)
-- [环境要求与依赖项](#-环境要求与依赖项)
-- [快速开始](#-快速开始)
-- [工具类详解](#-工具类详解)
-- [配置文件说明](#-配置文件说明)
-- [测试用例编写规范](#-测试用例编写规范)
-- [使用示例](#-使用示例)
-- [常见问题解答](#-常见问题解答)
-- [最佳实践](#-最佳实践)
+- [项目框架概述](#项目框架概述)
+- [快速入门指南](#快速入门指南)
+- [核心组件说明](#核心组件说明)
+- [页面定位教程](#页面定位教程)
+- [代码示例](#代码示例)
+- [测试运行](#测试运行)
+- [最佳实践](#最佳实践)
 
-## 📈 版本更新
+## 🏗️ 项目框架概述
 
-### 最新版本 (2025年9月)
+### 整体架构设计
 
-**🎉 重大改进和修复**
-
-- **✅ 测试稳定性提升**: 修复了表单提交测试中的选择器冲突问题，30个测试用例100%通过
-- **🛠️ 智能目录管理**: 完全修复空目录问题，只在实际需要时创建截图和视频目录
-- **⚡ 性能优化**: 优化了页面对象模型，平均测试执行时间提升至1.3秒/用例
-- **🔧 代码质量**: 修复缩进错误，统一代码风格，提高可维护性
-- **📊 测试覆盖**: 验证了表单处理、模态框、标签页、表格等核心功能
-- **🚀 并行执行**: 支持16个worker并行执行，大幅提升测试效率
-
-**🔧 技术改进**
-
-- 优化了 `verify_form_alert` 方法的等待机制
-- 简化了测试用例结构，专注核心功能验证
-- 改进了错误处理和调试信息输出
-- 完善了页面对象模型的元素定位策略
-
-## 🚀 核心特性
-
-- **🎭 多浏览器支持**: 基于 Playwright，支持 Chromium、Firefox、WebKit 三大浏览器引擎
-- **🧪 强大测试框架**: 使用 Pytest 作为测试运行器，提供丰富的插件生态和灵活的测试组织
-- **📊 美观测试报告**: 集成 Allure 报告系统，提供详细的测试结果展示和历史趋势分析
-- **📄 页面对象模型**: 实现标准的 POM 设计模式，提高代码可维护性和复用性
-- **📝 智能日志系统**: 基于 Loguru 的结构化日志记录，支持多级别日志和测试步骤追踪
-- **📸 自动化截图录屏**: 失败时自动截图和录屏，快速定位问题根因
-- **🔄 CI/CD 集成**: 完整的 GitHub Actions 工作流，支持持续集成和部署
-- **🎯 多环境配置**: 灵活的环境配置管理，支持开发、测试、预发布、生产环境
-- **⚡ 并行执行**: 支持多进程并行测试执行，提高测试效率（16个worker并行）
-- **🔄 失败重试**: 智能失败重试机制，提高测试稳定性
-- **📁 智能目录管理**: 按测试会话自动组织报告和文件，避免文件混乱
-- **🛠️ 优化的资源管理**: 智能的截图和视频文件管理，避免创建空目录
-- **✅ 全面功能验证**: 30个测试用例100%通过，覆盖表单、模态框、标签页、表格等核心功能
-- **🚀 高性能执行**: 平均每个测试用例执行时间约1.3秒，总执行时间38.5秒
-
-## 🏗️ 框架整体架构
-
-### 架构设计原则
-
-本框架采用分层架构设计，遵循以下设计原则：
-
-1. **分离关注点**: 将页面操作、测试逻辑、配置管理、工具函数分离到不同层次
-2. **高内聚低耦合**: 每个模块职责单一，模块间依赖最小化
-3. **可扩展性**: 支持快速添加新的页面对象、测试用例和工具类
-4. **可维护性**: 清晰的代码结构和完善的文档，便于团队协作
-
-### 架构层次
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        测试层 (Tests)                        │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   UI 测试用例    │  │   API 测试用例   │  │   集成测试用例   │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────┐
-│                      页面对象层 (Pages)                       │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │    BasePage     │  │   LoginPage     │  │   HomePage      │ │
-│  │   (基础页面)     │  │   (登录页面)     │  │   (首页)        │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────┐
-│                      工具层 (Utils)                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │  Logger Config  │  │ Screenshot Helper│  │  Video Helper   │ │
-│  │   (日志配置)     │  │   (截图工具)     │  │   (录屏工具)     │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────┐
-│                      配置层 (Config)                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   Env Config    │  │ Playwright Config│  │   Pytest Config │ │
-│  │   (环境配置)     │  │ (浏览器配置)     │  │   (测试配置)     │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────┐
-│                    驱动层 (Playwright)                       │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │    Chromium     │  │     Firefox     │  │     WebKit      │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 数据流向
-
-1. **测试执行**: Pytest 读取配置文件，初始化测试环境
-2. **会话创建**: 自动创建唯一的测试会话目录，确保文件隔离
-3. **浏览器启动**: Playwright 根据配置启动指定浏览器
-4. **页面操作**: 测试用例通过页面对象执行具体操作
-5. **结果记录**: 工具类记录日志、截图、录屏等测试数据到会话目录
-6. **报告生成**: Allure 和 HTML 报告生成器处理测试结果并保存到会话目录
-
-### 目录管理优化
-
-框架采用智能的目录管理策略：
-
-- **会话隔离**: 每次测试运行创建独立的会话目录 `test_session_YYYYMMDD_HHMMSS`
-- **资源优化**: 截图和视频文件只在实际使用时创建，避免空目录
-- **自动清理**: 可配置的历史会话清理机制，节省磁盘空间
-- **并行安全**: 支持多个测试会话并行运行而不冲突
-
-## 📁 项目结构
+本框架采用分层架构设计，确保代码的可维护性和可扩展性：
 
 ```
 PlaywrightProject/
-├── .github/                    # GitHub 相关配置
-│   └── workflows/
-│       ├── ci.yml              # CI/CD 工作流配置
-│       └── test.yml            # 测试工作流配置
-├── config/                     # 配置管理模块
-│   ├── __init__.py
-│   ├── env_config.py           # 环境配置管理
-│   └── playwright_config.py    # Playwright 浏览器配置
-├── pages/                      # 页面对象模块
-│   ├── __init__.py
-│   ├── base_page.py           # 页面对象基类
-│   └── practice_page.py       # 具体页面对象实现
-├── tests/                      # 测试用例模块
-│   ├── __init__.py
-│   ├── base_test.py           # 测试基类
-│   ├── test_practice_page.py  # 页面功能测试
-│   └── test_simple_practice.py # 简单功能测试
-├── utils/                      # 工具类模块
-│   ├── __init__.py
-│   ├── logger_config.py       # 日志配置工具
-│   ├── screenshot_helper.py   # 截图辅助工具
-│   └── video_helper.py        # 录屏辅助工具
-├── reports/                    # 测试报告目录（按会话组织）
-│   └── test_session_YYYYMMDD_HHMMSS/  # 测试会话目录
-│       ├── allure-results/    # Allure 原始测试结果
-│       ├── allure-report/     # Allure HTML 报告
-│       ├── screenshots/       # 测试截图文件
-│       ├── videos/            # 测试录屏文件
-│       └── html/              # HTML 测试报告
-├── logs/                      # 日志文件目录
-│   └── pytest.log            # Pytest 运行日志
-├── conftest.py               # Pytest 全局配置和 Fixtures
-├── pytest.ini               # Pytest 配置文件
-├── requirements.txt          # Python 依赖包列表
-├── practice_page.html        # 测试用的示例页面
-├── Dockerfile               # Docker 容器配置
-├── docker-compose.yml       # Docker Compose 配置
-└── README.md                # 项目文档
+├── config/           # 配置管理层
+│   ├── env_config.py      # 环境配置
+│   └── playwright_config.py # Playwright配置
+├── pages/            # 页面对象层 (POM)
+│   ├── base_page.py       # 基础页面类
+│   ├── practice_page.py   # 练习页面类
+│   └── simple_practice_page.py # 简化练习页面类
+├── tests/            # 测试用例层
+│   ├── base_test.py       # 基础测试类
+│   ├── test_practice_page.py # 练习页面测试
+│   └── test_simple_practice_pom.py # POM模式测试
+├── utils/            # 工具服务层
+│   ├── logger_config.py   # 日志配置
+│   ├── screenshot_helper.py # 截图工具
+│   └── video_helper.py    # 视频录制工具
+├── conftest.py       # pytest配置和fixture
+├── run_tests.py      # 智能测试运行器
+└── pytest.ini       # pytest配置文件
 ```
 
-## 🔧 环境要求与依赖项
+### 核心特性
 
-### 系统要求
+- 🎯 **POM设计模式** - 页面对象模型，提高代码复用性和维护性
+- 🚀 **智能并行执行** - 自动检测CPU核心数，优化测试执行效率
+- 📊 **详细测试报告** - 集成Allure报告，提供可视化测试结果
+- 🔧 **灵活配置管理** - 支持多环境配置和参数化测试
+- 📸 **自动截图录屏** - 测试失败时自动保存截图和视频
+- 🔍 **智能元素定位** - 提供多种定位策略和最佳实践
 
-- **操作系统**: Windows 10+, macOS 10.14+, Ubuntu 18.04+
-- **Python**: 3.9+ (推荐 3.11+)
-- **Node.js**: 16+ (Playwright 浏览器驱动依赖)
-- **内存**: 最少 4GB，推荐 8GB+
-- **磁盘空间**: 至少 2GB 可用空间
+## 🚀 快速入门指南
 
-### 核心依赖
+### 环境要求
 
-#### 测试框架核心
-```
-playwright>=1.40.0          # Web 自动化测试引擎
-pytest>=7.4.0              # Python 测试框架
-pytest-playwright>=0.4.0   # Playwright 与 Pytest 集成
+- Python 3.8+
+- Node.js 14+ (Playwright依赖)
+- Windows/macOS/Linux
+
+### 安装步骤
+
+1. **克隆项目**
+   ```bash
+   git clone <repository-url>
+   cd PlaywrightProject
+   ```
+
+2. **创建虚拟环境**
+   ```bash
+   python -m venv venv
+   # Windows
+   venv\Scripts\activate
+   # macOS/Linux
+   source venv/bin/activate
+   ```
+
+3. **安装依赖**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **安装浏览器**
+   ```bash
+   playwright install
+   ```
+
+5. **配置环境变量**
+   ```bash
+   cp .env.example .env
+   # 编辑 .env 文件，配置测试环境参数
+   ```
+
+6. **运行测试验证**
+   ```bash
+   python run_tests.py tests/test_simple_practice_pom.py -v
+   ```
+
+## 🔧 核心组件说明
+
+### 配置类详解
+
+#### 1. 环境配置 (env_config.py)
+
+```python
+from config.env_config import EnvConfig
+
+# 获取配置实例
+config = EnvConfig()
+
+# 使用配置
+base_url = config.get_base_url()  # 获取基础URL
+timeout = config.get_timeout()    # 获取超时时间
+browser = config.get_browser()    # 获取浏览器类型
 ```
 
-#### 测试报告和文档
-```
-allure-pytest>=2.13.0      # Allure 报告集成
-pytest-html>=4.1.0         # HTML 测试报告
-```
-
-#### 并行执行和重试
-```
-pytest-xdist>=3.5.0        # 并行测试执行
-pytest-rerunfailures>=12.0 # 失败重试机制
-```
-
-#### 日志和工具
-```
-loguru>=0.7.0              # 现代化日志库
-pydantic>=2.5.0            # 数据验证和配置管理
-```
-
-#### 数据处理
-```
-pytest-mock>=3.12.0        # Mock 测试工具
-faker>=20.1.0              # 测试数据生成
-```
-
-#### 配置和环境
-```
-python-dotenv>=1.0.0       # 环境变量管理
-toml>=0.10.0               # TOML 配置文件支持
-```
-
-#### 图像和视频处理
-```
-Pillow>=10.1.0             # 图像处理
-opencv-python>=4.8.0       # 视频处理
-```
-
-#### 开发和调试
-```
-pytest-sugar>=0.9.0        # 美化测试输出
-```
-
-## 🚀 快速开始
-
-### 1. 环境准备
-
+**配置示例：**
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd PlaywrightProject
-
-# 创建虚拟环境 (推荐)
-python -m venv venv
-
-# 激活虚拟环境
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
+# .env 文件
+BASE_URL=https://example.com
+BROWSER=chromium
+HEADLESS=false
+TIMEOUT=30000
+PARALLEL_WORKERS=auto
 ```
 
-### 2. 安装依赖
+#### 2. Playwright配置 (playwright_config.py)
 
-```bash
-# 安装 Python 依赖
-pip install -r requirements.txt
-
-# 安装 Playwright 浏览器
-playwright install
-
-# 安装系统依赖 (Linux)
-playwright install-deps
-```
-
-### 3. 验证安装
-
-```bash
-# 检查 Playwright 安装
-playwright --version
-
-# 检查 pytest 安装
-pytest --version
-
-# 运行示例测试
-pytest tests/test_simple_practice.py -v
-```
-
-### 4. 基本使用
-
-```bash
-# 运行所有测试（推荐）
-pytest -v --tb=short
-
-# 运行指定测试文件
-pytest tests/test_practice_page.py -v
-
-# 运行指定测试用例
-pytest tests/test_practice_page.py::TestPracticePage::test_basic_form_submission -v
-
-# 生成 Allure 报告
-pytest --alluredir=reports/allure-results
-allure serve reports/allure-results
-
-# 并行执行测试（提高效率）
-pytest -n auto -v
-```
-
-### 5. 框架验证结果
-
-✅ **最新测试结果**（已验证）:
-- **总测试用例**: 30个
-- **通过率**: 100%
-- **执行时间**: 38.5秒
-- **并行worker**: 16个
-- **平均用例执行时间**: 1.3秒
-
-**功能覆盖验证**:
-- ✅ 基础页面操作（点击、输入、选择）
-- ✅ 表单处理（填写、提交、验证、重置）
-- ✅ 模态框交互（打开、关闭、输入、确认/取消）
-- ✅ 标签页切换（导航和内容验证）
-- ✅ 表格操作（添加行、删除行、数据验证）
-- ✅ 进度条功能（启动和完成验证）
-- ✅ 警告对话框（浏览器原生对话框处理）
-- ✅ 并发测试（多worker并行执行）
-- ✅ 报告生成（HTML和Allure报告）
-
-## 🛠️ 工具类详解
-
-### 1. BasePage (页面对象基类)
-
-**文件位置**: `pages/base_page.py`
-
-**实现原理**: 
-- 采用抽象基类设计，定义页面对象的通用接口
-- 封装 Playwright 的底层 API，提供高级页面操作方法
-- 集成日志记录和错误处理机制
-- 支持链式调用，提高代码可读性
-
-**核心功能**:
-
-#### 页面导航
 ```python
-def navigate(self, url: str = None, wait_until: str = "domcontentloaded") -> 'BasePage':
-    """导航到指定页面，支持等待策略配置"""
+from config.playwright_config import PlaywrightConfig
+
+# 获取浏览器配置
+browser_config = PlaywrightConfig.get_browser_config()
+viewport_config = PlaywrightConfig.get_viewport_config()
 ```
 
-#### 元素操作
+### 工具类使用规范
+
+#### 1. 截图工具 (screenshot_helper.py)
+
 ```python
-def click(self, selector: str, timeout: int = None, force: bool = False) -> 'BasePage':
-    """点击元素，支持强制点击和超时配置"""
+from utils.screenshot_helper import ScreenshotHelper
 
-def fill(self, selector: str, value: str, timeout: int = None, clear: bool = True) -> 'BasePage':
-    """填充输入框，支持清空和超时配置"""
-
-def select_option(self, selector: str, value: str = None, label: str = None) -> 'BasePage':
-    """选择下拉框选项，支持按值或标签选择"""
+# 在测试中使用
+class TestExample(BaseTest):
+    def test_example(self):
+        # 自动截图（测试失败时）
+        ScreenshotHelper.capture_on_failure(self.page, "test_name")
+        
+        # 手动截图
+        ScreenshotHelper.capture_screenshot(self.page, "custom_screenshot")
 ```
 
-#### 元素状态检查
+#### 2. 日志配置 (logger_config.py)
+
+项目使用 **loguru** 作为日志系统，提供了丰富的日志功能和自动化配置。
+
+**基本使用：**
 ```python
-def is_visible(self, selector: str, timeout: int = None) -> bool:
-    """检查元素是否可见"""
+from loguru import logger
+from utils.logger_config import logger_config
 
-def is_enabled(self, selector: str, timeout: int = None) -> bool:
-    """检查元素是否可用"""
-
-def get_text(self, selector: str, timeout: int = None) -> str:
-    """获取元素文本内容"""
+# 日志系统已在conftest.py中自动初始化，直接使用即可
+logger.info("测试开始执行")
+logger.error("测试执行失败")
+logger.debug("调试信息")
+logger.warning("警告信息")
 ```
 
-#### 等待机制
+**在测试中使用日志工具类：**
 ```python
-def wait_for_element(self, selector: str, state: str = "visible", timeout: int = None) -> Locator:
-    """等待元素达到指定状态"""
-
-def wait_for_page_load(self, timeout: int = None) -> None:
-    """等待页面完全加载"""
+class TestWithLogging(BaseTest):
+    def test_example(self):
+        # 记录测试步骤
+        logger_config.log_step("导航到登录页面")
+        
+        # 记录页面操作
+        logger_config.log_page_action("填写用户名", "#username", "testuser")
+        
+        # 记录断言结果
+        logger_config.log_assertion("验证页面标题", True, "实际标题", "期望标题")
+        
+        # 记录截图
+        logger_config.log_screenshot("/path/to/screenshot.png", "登录页面")
 ```
 
-**使用示例**:
+**日志文件说明：**
+- `logs/test.log` - 通用日志文件（INFO级别及以上）
+- `logs/error.log` - 错误日志文件（ERROR级别及以上）
+- `logs/pytest.log` - pytest框架日志（DEBUG级别）
+
+**日志级别配置：**
 ```python
-class LoginPage(BasePage):
-    @property
-    def url(self) -> str:
-        return "https://example.com/login"
-    
-    @property 
-    def title(self) -> str:
-        return "登录页面"
-    
-    def login(self, username: str, password: str):
-        return (self
-                .fill("#username", username)
-                .fill("#password", password)
-                .click("#login-btn")
-                .wait_for_page_load())
-```
+# 通过环境变量设置日志级别
+set LOG_LEVEL=DEBUG  # Windows
+export LOG_LEVEL=DEBUG  # Linux/Mac
 
-### 2. LoggerConfig (日志配置工具)
-
-**文件位置**: `utils/logger_config.py`
-
-**实现原理**:
-- 基于 Loguru 库，提供结构化日志记录
-- 支持多种输出目标：控制台、文件、远程服务
-- 实现日志轮转、压缩和清理机制
-- 提供测试步骤追踪和性能监控
-
-**核心功能**:
-
-#### 日志配置
-```python
-def setup_logger(
-    self,
-    level: str = "INFO",
-    console_output: bool = True,
-    file_output: bool = True,
-    rotation: str = "10 MB",
-    retention: str = "30 days",
-    compression: str = "zip"
-) -> None:
-    """设置日志配置"""
-```
-
-#### 测试步骤记录
-```python
-def log_test_step(self, step_name: str, description: str = "") -> None:
-    """记录测试步骤"""
-
-def log_page_action(self, action: str, target: str, extra_info: str = "") -> None:
-    """记录页面操作"""
-```
-
-#### 性能监控
-```python
-def log_performance(self, operation: str, duration: float, threshold: float = 5.0) -> None:
-    """记录性能数据"""
-```
-
-**配置示例**:
-```python
-# 开发环境配置
+# 或在代码中配置
 logger_config.setup_logger(
     level="DEBUG",
     console_output=True,
-    file_output=True,
-    rotation="50 MB",
-    retention="7 days"
-)
-
-# 生产环境配置
-logger_config.setup_logger(
-    level="INFO",
-    console_output=False,
-    file_output=True,
-    rotation="100 MB",
-    retention="90 days",
-    compression="gz"
+    file_output=True
 )
 ```
 
-### 3. ScreenshotHelper (截图工具)
+**日志功能特性：**
+- ✅ 自动日志轮转（10MB轮转，保留30天）
+- ✅ 彩色控制台输出
+- ✅ 结构化日志格式
+- ✅ 测试生命周期自动记录
+- ✅ 失败测试自动记录详细信息
+- ✅ 多进程安全
 
-**文件位置**: `utils/screenshot_helper.py`
+## 🎯 页面元素定位教程（新手详解版）
 
-**实现原理**:
-- 封装 Playwright 的截图功能
-- 支持全页面、元素级别、视窗截图
-- 智能目录管理，基于测试会话创建截图目录
-- 自动生成唯一文件名和目录结构
-- 集成失败自动截图机制
-- 优化的资源管理，避免创建空目录
+### 📚 基础定位方法详解
 
-**核心功能**:
+#### 1. 通过ID定位
 
-#### 截图类型
+**语法格式：**
 ```python
-def take_screenshot(self, name: str = None, full_page: bool = True) -> str:
-    """截取页面截图"""
-
-def take_element_screenshot(self, selector: str, name: str = None) -> str:
-    """截取元素截图"""
-
-def take_failure_screenshot(self, test_name: str, error_msg: str = "") -> str:
-    """失败时自动截图"""
+# Playwright写法
+self.page.locator("#element_id")
+# 或者
+self.page.locator("[id='element_id']")
 ```
 
-#### 截图配置
+**适用场景：** ID在页面中是唯一的，适合定位关键元素如登录按钮、主要输入框等。
+
+**优点：** 定位速度快、准确性高、代码简洁
+**缺点：** 依赖开发人员设置ID，动态生成的ID可能不稳定
+
+**HTML示例：**
+```html
+<input id="username" type="text" placeholder="请输入用户名">
+<button id="login-btn" type="submit">登录</button>
+```
+
+**定位器写法：**
 ```python
-def configure_screenshot(
-    self,
-    quality: int = 90,
-    format: str = "png",
-    clip: dict = None,
-    mask: list = None
-) -> None:
-    """配置截图参数"""
+# 定位用户名输入框
+username_input = self.page.locator("#username")
+# 定位登录按钮
+login_button = self.page.locator("#login-btn")
 ```
 
-### 4. VideoHelper (录屏工具)
+#### 2. 通过类名定位
 
-**文件位置**: `utils/video_helper.py`
-
-**实现原理**:
-- 基于 Playwright 的视频录制功能
-- 支持测试执行过程的完整录制
-- 智能目录管理，基于测试会话创建视频目录
-- 自动处理视频文件的保存和清理
-- 提供视频压缩和格式转换
-- 优化的资源管理，避免创建空目录
-
-**核心功能**:
-
-#### 录屏控制
+**语法格式：**
 ```python
-def start_recording(self, video_path: str = None) -> None:
-    """开始录屏"""
-
-def stop_recording(self) -> str:
-    """停止录屏并返回文件路径"""
-
-def configure_video(
-    self,
-    size: dict = None,
-    frame_rate: int = 25,
-    quality: str = "medium"
-) -> None:
-    """配置录屏参数"""
+# 单个类名
+self.page.locator(".class_name")
+# 多个类名组合
+self.page.locator(".class1.class2")
+# 包含特定类的元素
+self.page.locator("[class*='partial_class']")
 ```
 
-## ⚙️ 配置文件说明
+**适用场景：** 适合定位具有相同样式或功能的元素组，如按钮组、卡片列表等。
 
-### 1. pytest.ini (Pytest 配置)
+**优点：** 灵活性好，可以批量操作相同类型元素
+**缺点：** 类名可能重复，需要结合其他条件精确定位
 
-**文件位置**: `pytest.ini`
-
-**主要配置项**:
-
-#### 基础配置
-```ini
-[pytest]
-# 严格模式配置
-addopts = 
-    --strict-markers        # 严格标记模式
-    --strict-config         # 严格配置模式
-    --verbose              # 详细输出
-    --tb=short             # 简短错误回溯
+**HTML示例：**
+```html
+<button class="btn btn-primary">主要按钮</button>
+<button class="btn btn-secondary">次要按钮</button>
+<div class="card user-card active">用户卡片</div>
 ```
 
-#### 报告配置
-```ini
-# 测试报告
---alluredir=reports/allure-results    # Allure 结果目录
---html=reports/html/report.html       # HTML 报告路径
---self-contained-html                 # 自包含 HTML 报告
-```
-
-#### 执行配置
-```ini
-# 重试和并行
---reruns=1                # 失败重试次数
---reruns-delay=2          # 重试延迟(秒)
---maxfail=5              # 最大失败数
---durations=10           # 显示最慢的10个测试
--n auto                  # 自动并行进程数
---dist=worksteal         # 工作窃取分发策略
-```
-
-#### 测试发现
-```ini
-# 测试文件模式
-python_files = test_*.py *_test.py
-python_classes = Test*
-python_functions = test_*
-testpaths = tests
-```
-
-#### 标记定义
-```ini
-markers =
-    smoke: 冒烟测试
-    regression: 回归测试
-    ui: UI测试
-    slow: 慢速测试
-    skip_in_ci: 在CI中跳过的测试
-```
-
-#### 日志配置
-```ini
-# 控制台日志
-log_cli = true
-log_cli_level = INFO
-log_cli_format = %(asctime)s [%(levelname)8s] %(name)s: %(message)s
-
-# 文件日志
-log_file = logs/pytest.log
-log_file_level = DEBUG
-log_file_format = %(asctime)s [%(levelname)8s] %(filename)s:%(lineno)d: %(message)s
-```
-
-### 2. env_config.py (环境配置)
-
-**文件位置**: `config/env_config.py`
-
-**配置结构**:
-
-#### 环境枚举
+**定位器写法：**
 ```python
-class Environment(str, Enum):
-    TEST = "test"        # 测试环境
-    PROD = "prod"        # 生产环境
+# 定位所有按钮
+all_buttons = self.page.locator(".btn")
+# 定位主要按钮
+primary_button = self.page.locator(".btn.btn-primary")
+# 定位激活状态的用户卡片
+active_user_card = self.page.locator(".user-card.active")
 ```
 
-#### 配置模型
+#### 3. 通过标签名定位
+
+**语法格式：**
 ```python
-class EnvironmentConfig(BaseModel):
-    name: str                           # 环境名称
-    timeout: int = 30000                # 默认超时时间(毫秒)
-    headless: bool = True               # 是否无头模式
-    slow_mo: int = 0                    # 慢动作延迟(毫秒)
-    video_record: bool = False          # 是否录制视频
-    screenshot_on_failure: bool = True  # 失败时是否截图
-    parallel_workers: int = 4           # 并行工作进程数
-    retry_times: int = 2                # 重试次数
+# 基本标签定位
+self.page.locator("tag_name")
+# 结合属性定位
+self.page.locator("tag_name[attribute='value']")
 ```
 
-#### 环境配置示例
-```python
-ENVIRONMENT_CONFIGS = {
-    Environment.TEST: EnvironmentConfig(
-        name="测试环境",
-        headless=True,
-        video_record=True,
-        parallel_workers=4
-    ),
-    
-    Environment.PROD: EnvironmentConfig(
-        name="生产环境",
-        headless=True,
-        timeout=60000,
-        parallel_workers=8,
-        retry_times=3
-    )
-}
+**适用场景：** 适合定位特定类型的HTML元素，如所有输入框、所有链接等。
+
+**优点：** 语法简单，适合批量操作
+**缺点：** 定位范围太广，通常需要结合其他条件
+
+**HTML示例：**
+```html
+<form>
+  <input type="text" name="username">
+  <input type="password" name="password">
+  <input type="submit" value="登录">
+</form>
+<a href="/home">首页</a>
+<a href="/about">关于我们</a>
 ```
 
-### 3. playwright_config.py (Playwright 配置)
-
-**文件位置**: `config/playwright_config.py`
-
-**主要配置**:
-
-#### 浏览器配置
+**定位器写法：**
 ```python
-class PlaywrightConfig:
-    def get_browser_config(self, browser_name: str = "chromium") -> dict:
-        return {
-            "headless": self.env_config.headless,
-            "slow_mo": self.env_config.slow_mo,
-            "args": [
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu"
-            ],
-            "viewport": {"width": 1920, "height": 1080},
-            "ignore_https_errors": True,
-            "java_script_enabled": True
-        }
+# 定位所有输入框
+all_inputs = self.page.locator("input")
+# 定位文本输入框
+text_inputs = self.page.locator("input[type='text']")
+# 定位所有链接
+all_links = self.page.locator("a")
 ```
 
-#### 上下文配置
+#### 4. 通过名称定位
+
+**语法格式：**
 ```python
-def get_context_config(self) -> dict:
-    return {
-        "viewport": {"width": 1920, "height": 1080},
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "locale": "zh-CN",
-        "timezone_id": "Asia/Shanghai",
-        "permissions": ["geolocation", "notifications"],
-        "record_video_dir": "reports/videos/" if self.env_config.video_record else None,
-        "record_video_size": {"width": 1920, "height": 1080}
-    }
+# 通过name属性
+self.page.locator("[name='element_name']")
+# Playwright专用方法
+self.page.get_by_label("标签文本")
+self.page.get_by_placeholder("占位符文本")
 ```
 
-### 4. conftest.py (Pytest 全局配置)
+**适用场景：** 适合定位表单元素，特别是具有name属性的输入框。
 
-**文件位置**: `conftest.py`
+**优点：** 语义化强，便于理解和维护
+**缺点：** 依赖开发人员设置name属性
 
-**主要 Fixtures**:
-
-#### 浏览器和页面 Fixtures
-```python
-@pytest.fixture(scope="session")
-def browser_context_args(browser_context_args):
-    """配置浏览器上下文参数"""
-    return {
-        **browser_context_args,
-        "viewport": {"width": 1920, "height": 1080},
-        "record_video_dir": "reports/videos/"
-    }
-
-@pytest.fixture(scope="function")
-def page(context):
-    """创建页面实例"""
-    page = context.new_page()
-    yield page
-    page.close()
+**HTML示例：**
+```html
+<form>
+  <label for="email">邮箱地址：</label>
+  <input name="email" type="email" placeholder="请输入邮箱">
+  
+  <label for="phone">手机号码：</label>
+  <input name="phone" type="tel" placeholder="请输入手机号">
+</form>
 ```
 
-#### 测试数据 Fixtures
+**定位器写法：**
 ```python
-@pytest.fixture
-def test_data():
-    """提供测试数据"""
-    return {
-        "valid_user": {"username": "testuser", "password": "password123"},
-        "invalid_user": {"username": "invalid", "password": "wrong"}
-    }
+# 通过name属性定位
+email_input = self.page.locator("[name='email']")
+phone_input = self.page.locator("[name='phone']")
+
+# 通过标签文本定位
+email_by_label = self.page.get_by_label("邮箱地址")
+# 通过占位符定位
+email_by_placeholder = self.page.get_by_placeholder("请输入邮箱")
 ```
 
-## 📝 测试用例编写规范
+#### 5. 通过链接文本定位
 
-### 1. 命名规范
-
-#### 文件命名
-- 测试文件：`test_<功能模块>.py`
-- 页面对象：`<页面名称>_page.py`
-- 工具类：`<功能名称>_helper.py`
-
-#### 类和方法命名
+**语法格式：**
 ```python
-# 测试类命名
-class TestUserLogin:          # Test + 功能描述
-class TestProductSearch:      # 使用驼峰命名法
-
-# 测试方法命名
-def test_valid_user_login():           # test_ + 具体测试场景
-def test_invalid_password_login():     # 使用下划线分隔
-def test_empty_username_validation():  # 描述性命名
+# 精确文本匹配
+self.page.get_by_text("链接文本")
+self.page.get_by_text("链接文本", exact=True)
+# 部分文本匹配
+self.page.get_by_text("部分文本", exact=False)
+# 角色+名称定位
+self.page.get_by_role("link", name="链接文本")
 ```
 
-### 2. 测试用例结构
+**适用场景：** 适合定位导航链接、按钮等具有明确文本的元素。
 
-#### AAA 模式 (Arrange-Act-Assert)
-```python
-def test_user_login_success(self, page, test_data):
-    """测试用户成功登录"""
-    # Arrange - 准备测试数据和环境
-    login_page = LoginPage(page)
-    user_data = test_data["valid_user"]
-    
-    # Act - 执行测试操作
-    login_page.navigate()
-    login_page.login(user_data["username"], user_data["password"])
-    
-    # Assert - 验证测试结果
-    assert login_page.is_login_successful()
-    assert "dashboard" in page.url
+**优点：** 直观易懂，不依赖HTML结构
+**缺点：** 文本变化会导致定位失败，多语言环境需要特殊处理
+
+**HTML示例：**
+```html
+<nav>
+  <a href="/home">首页</a>
+  <a href="/products">产品中心</a>
+  <a href="/contact">联系我们</a>
+</nav>
+<button>立即购买</button>
+<button>加入购物车</button>
 ```
 
-#### Given-When-Then 模式
+**定位器写法：**
 ```python
-@allure.feature("用户登录")
-@allure.story("正常登录流程")
-def test_user_login_with_valid_credentials(self, page):
-    """测试用户使用有效凭据登录"""
-    with allure.step("Given 用户在登录页面"):
-        login_page = LoginPage(page)
-        login_page.navigate()
-    
-    with allure.step("When 用户输入有效的用户名和密码"):
-        login_page.fill_username("testuser")
-        login_page.fill_password("password123")
-        login_page.click_login_button()
-    
-    with allure.step("Then 用户应该成功登录到系统"):
-        assert login_page.is_login_successful()
-        assert "欢迎" in login_page.get_welcome_message()
+# 定位导航链接
+home_link = self.page.get_by_text("首页")
+products_link = self.page.get_by_role("link", name="产品中心")
+
+# 定位按钮
+buy_button = self.page.get_by_text("立即购买")
+cart_button = self.page.get_by_text("加入购物车")
+
+# 部分文本匹配
+contact_link = self.page.get_by_text("联系", exact=False)
 ```
 
-### 3. 测试数据管理
+#### 6. 通过CSS选择器定位
 
-#### 使用 Fixtures 提供测试数据
+**语法格式：**
 ```python
-@pytest.fixture
-def user_credentials():
-    """用户凭据测试数据"""
-    return {
-        "valid": {"username": "testuser", "password": "Test123!"},
-        "invalid_password": {"username": "testuser", "password": "wrong"},
-        "invalid_username": {"username": "nonexistent", "password": "Test123!"},
-        "empty": {"username": "", "password": ""}
-    }
-
-@pytest.mark.parametrize("credential_type,expected_result", [
-    ("valid", True),
-    ("invalid_password", False),
-    ("invalid_username", False),
-    ("empty", False)
-])
-def test_login_scenarios(self, page, user_credentials, credential_type, expected_result):
-    """参数化测试不同登录场景"""
-    login_page = LoginPage(page)
-    credentials = user_credentials[credential_type]
-    
-    login_page.navigate()
-    result = login_page.login(credentials["username"], credentials["password"])
-    
-    assert result == expected_result
+# 基本选择器
+self.page.locator("#id")              # ID选择器
+self.page.locator(".class")           # 类选择器
+self.page.locator("tag")              # 标签选择器
+# 属性选择器
+self.page.locator("[attribute='value']")
+# 组合选择器
+self.page.locator("parent > child")    # 直接子元素
+self.page.locator("ancestor descendant") # 后代元素
+# 伪类选择器
+self.page.locator("input:nth-child(2)") # 第二个子元素
+self.page.locator("button:first-of-type") # 同类型第一个
 ```
 
-#### 使用 Faker 生成动态数据
-```python
-from faker import Faker
+**适用场景：** 功能强大，适合复杂的定位需求，特别是需要精确控制定位范围时。
 
-@pytest.fixture
-def fake_user_data():
-    """生成虚假用户数据"""
-    fake = Faker('zh_CN')
-    return {
-        "name": fake.name(),
-        "email": fake.email(),
-        "phone": fake.phone_number(),
-        "address": fake.address()
-    }
+**优点：** 灵活性极高，支持复杂的组合条件
+**缺点：** 语法相对复杂，需要CSS基础知识
+
+**HTML示例：**
+```html
+<div class="form-container">
+  <div class="form-group">
+    <input type="text" class="form-control" required>
+    <span class="error-message">错误信息</span>
+  </div>
+  <div class="form-group">
+    <select class="form-control">
+      <option value="1">选项1</option>
+      <option value="2" selected>选项2</option>
+    </select>
+  </div>
+</div>
 ```
 
-### 4. 断言最佳实践
-
-#### 使用描述性断言消息
+**定位器写法：**
 ```python
-# 好的断言
-assert login_page.is_visible("#welcome-message"), "登录后应该显示欢迎消息"
-assert "dashboard" in page.url, f"登录后应该跳转到仪表板页面，当前URL: {page.url}"
+# 基本选择器
+form_container = self.page.locator(".form-container")
+first_input = self.page.locator("input.form-control")
 
-# 避免的断言
-assert True  # 没有意义的断言
-assert login_page.is_visible("#welcome-message")  # 缺少错误消息
+# 组合选择器
+first_group_input = self.page.locator(".form-group:first-child input")
+selected_option = self.page.locator("option[selected]")
+error_message = self.page.locator(".form-group .error-message")
+
+# 属性选择器
+required_input = self.page.locator("input[required]")
+text_inputs = self.page.locator("input[type='text']")
 ```
 
-#### 使用 Playwright 的内置断言
-```python
-from playwright.sync_api import expect
+#### 7. 通过XPath定位
 
-# 推荐使用 Playwright 的 expect
-expect(page.locator("#username")).to_be_visible()
-expect(page.locator("#error-message")).to_have_text("用户名不能为空")
-expect(page).to_have_url(re.compile(r".*/dashboard"))
+**语法格式：**
+```python
+# 绝对路径（不推荐）
+self.page.locator("/html/body/div/form/input")
+# 相对路径（推荐）
+self.page.locator("//input[@id='username']")
+# 文本定位
+self.page.locator("//button[text()='提交']")
+self.page.locator("//a[contains(text(),'更多')]")
+# 轴定位
+self.page.locator("//label[text()='用户名']/following-sibling::input")
+# 索引定位
+self.page.locator("(//input[@type='text'])[2]")
 ```
 
-### 5. 错误处理和重试
+**适用场景：** 适合复杂的层级关系定位，特别是CSS选择器难以表达的场景。
 
-#### 智能等待和重试
-```python
-def test_dynamic_content_loading(self, page):
-    """测试动态内容加载"""
-    page.goto("https://example.com/dynamic")
-    
-    # 等待动态内容加载
-    expect(page.locator("#dynamic-content")).to_be_visible(timeout=30000)
-    
-    # 使用重试机制处理不稳定的元素
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-    def click_unstable_element():
-        page.locator("#unstable-button").click()
-        expect(page.locator("#result")).to_be_visible()
-    
-    click_unstable_element()
+**优点：** 功能最强大，支持复杂的逻辑判断和轴定位
+**缺点：** 语法复杂，性能相对较差，可读性不如CSS选择器
+
+**HTML示例：**
+```html
+<form class="login-form">
+  <div class="field-group">
+    <label>用户名：</label>
+    <input type="text" name="username">
+  </div>
+  <div class="field-group">
+    <label>密码：</label>
+    <input type="password" name="password">
+  </div>
+  <button type="submit">登录</button>
+  <a href="/register">还没有账号？立即注册</a>
+</form>
 ```
 
-#### 异常处理
+**定位器写法：**
 ```python
-def test_with_error_handling(self, page):
-    """带错误处理的测试用例"""
-    try:
-        login_page = LoginPage(page)
-        login_page.navigate()
-        login_page.login("testuser", "password")
+# 属性定位
+username_input = self.page.locator("//input[@name='username']")
+password_input = self.page.locator("//input[@type='password']")
+
+# 文本定位
+login_button = self.page.locator("//button[text()='登录']")
+register_link = self.page.locator("//a[contains(text(),'注册')]")
+
+# 轴定位（通过标签找相邻输入框）
+username_by_label = self.page.locator("//label[text()='用户名：']/following-sibling::input")
+
+# 层级定位
+form_inputs = self.page.locator("//form[@class='login-form']//input")
+second_input = self.page.locator("(//div[@class='field-group']//input)[2]")
+```
+
+### 🚀 实战示例部分
+
+#### 1. 简单登录页面完整定位示例
+
+**HTML页面结构：**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>用户登录</title>
+</head>
+<body>
+    <div class="login-container">
+        <h2 id="login-title">用户登录</h2>
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="username">用户名：</label>
+                <input id="username" name="username" type="text" 
+                       placeholder="请输入用户名" required>
+                <span class="error-msg" id="username-error"></span>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码：</label>
+                <input id="password" name="password" type="password" 
+                       placeholder="请输入密码" required>
+                <span class="error-msg" id="password-error"></span>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="remember" value="1">
+                    记住我
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">登录</button>
+                <button type="button" class="btn btn-secondary">重置</button>
+            </div>
+        </form>
         
-        # 验证登录结果
-        assert login_page.is_login_successful()
-        
-    except TimeoutError as e:
-        pytest.fail(f"页面加载超时: {str(e)}")
-    except AssertionError as e:
-        # 失败时截图
-        screenshot_path = page.screenshot(path="reports/screenshots/login_failed.png")
-        allure.attach.file(screenshot_path, name="登录失败截图", attachment_type=allure.attachment_type.PNG)
-        raise
-    except Exception as e:
-        pytest.fail(f"测试执行出现未预期错误: {str(e)}")
+        <div class="links">
+            <a href="/register">还没有账号？立即注册</a>
+            <a href="/forgot-password">忘记密码？</a>
+        </div>
+    </div>
+</body>
+</html>
 ```
 
-### 6. 测试标记和分组
-
-#### 使用 pytest 标记
-```python
-@pytest.mark.smoke
-def test_critical_user_login():
-    """冒烟测试：关键用户登录功能"""
-    pass
-
-@pytest.mark.regression
-@pytest.mark.slow
-def test_comprehensive_user_workflow():
-    """回归测试：完整用户工作流程"""
-    pass
-
-@pytest.mark.skip_in_ci
-def test_manual_verification_required():
-    """需要手动验证的测试，CI中跳过"""
-    pass
-```
-
-#### 运行特定标记的测试
-```bash
-# 只运行冒烟测试
-pytest -m smoke
-
-# 运行回归测试但排除慢速测试
-pytest -m "regression and not slow"
-
-# 在CI环境中排除特定测试
-pytest -m "not skip_in_ci"
-```
-
-## 💡 使用示例
-
-### 1. 基础测试用例示例
-
-#### 简单表单测试
-```python
-import pytest
-from pages.practice_page import PracticePage
-
-class TestBasicForm:
-    """基础表单测试"""
-    
-    def test_form_submission(self, page):
-        """测试表单提交功能"""
-        # 初始化页面对象
-        practice_page = PracticePage(page)
-        
-        # 导航到测试页面
-        practice_page.navigate()
-        
-        # 填写表单
-        practice_page.fill_basic_form(
-            username="testuser",
-            email="test@example.com",
-            age=25
-        )
-        
-        # 提交表单
-        practice_page.submit_form()
-        
-        # 验证提交结果
-        assert practice_page.is_form_submitted_successfully()
-        assert "提交成功" in practice_page.get_success_message()
-    
-    def test_form_validation(self, page):
-        """测试表单验证功能"""
-        practice_page = PracticePage(page)
-        practice_page.navigate()
-        
-        # 提交空表单
-        practice_page.submit_form()
-        
-        # 验证错误消息
-        assert practice_page.has_validation_errors()
-        assert "用户名不能为空" in practice_page.get_validation_error("username")
-```
-
-#### 复杂交互测试
-```python
-class TestAdvancedInteractions:
-    """高级交互测试"""
-    
-    @pytest.mark.slow
-    def test_multi_step_workflow(self, page, test_data):
-        """测试多步骤工作流程"""
-        practice_page = PracticePage(page)
-        practice_page.navigate()
-        
-        # 步骤1：填写基本信息
-        with allure.step("填写基本信息"):
-            practice_page.fill_basic_form(**test_data["user_info"])
-        
-        # 步骤2：选择选项
-        with allure.step("选择相关选项"):
-            practice_page.select_country("china")
-            practice_page.select_hobbies(["reading", "music"])
-        
-        # 步骤3：处理弹窗
-        with allure.step("处理确认弹窗"):
-            practice_page.click_confirm_button()
-            practice_page.handle_confirm_dialog(accept=True)
-        
-        # 步骤4：验证最终结果
-        with allure.step("验证工作流程完成"):
-            assert practice_page.is_workflow_completed()
-    
-    def test_dynamic_content_interaction(self, page):
-        """测试动态内容交互"""
-        practice_page = PracticePage(page)
-        practice_page.navigate()
-        
-        # 触发动态内容加载
-        practice_page.start_progress_bar()
-        
-        # 等待进度条完成
-        practice_page.wait_for_progress_completion(timeout=30000)
-        
-        # 验证动态内容
-        assert practice_page.get_progress_percentage() == "100%"
-        assert practice_page.is_progress_completed()
-```
-
-### 2. 页面对象实现示例
-
+**完整页面对象类实现：**
 ```python
 from pages.base_page import BasePage
-from typing import List
+from playwright.sync_api import Page
 
-class PracticePage(BasePage):
-    """练习页面对象"""
+class LoginPage(BasePage):
+    """登录页面对象类 - 展示多种定位方法"""
+    
+    def __init__(self, page: Page):
+        super().__init__(page)
+        
+        # 方法1：通过ID定位（推荐 - 最稳定）
+        self.username_input = page.locator("#username")
+        self.password_input = page.locator("#password")
+        self.login_title = page.locator("#login-title")
+        
+        # 方法2：通过CSS类名定位
+        self.login_container = page.locator(".login-container")
+        self.form_groups = page.locator(".form-group")
+        self.error_messages = page.locator(".error-msg")
+        
+        # 方法3：通过name属性定位
+        self.username_by_name = page.locator("[name='username']")
+        self.password_by_name = page.locator("[name='password']")
+        self.remember_checkbox = page.locator("[name='remember']")
+        
+        # 方法4：通过标签文本定位（Playwright推荐）
+        self.username_by_label = page.get_by_label("用户名")
+        self.password_by_label = page.get_by_label("密码")
+        
+        # 方法5：通过占位符定位
+        self.username_by_placeholder = page.get_by_placeholder("请输入用户名")
+        self.password_by_placeholder = page.get_by_placeholder("请输入密码")
+        
+        # 方法6：通过角色定位（最语义化）
+        self.login_button = page.get_by_role("button", name="登录")
+        self.reset_button = page.get_by_role("button", name="重置")
+        self.register_link = page.get_by_role("link", name="还没有账号？立即注册")
+        
+        # 方法7：通过CSS选择器组合定位
+        self.primary_button = page.locator(".btn.btn-primary")
+        self.secondary_button = page.locator(".btn.btn-secondary")
+        self.first_form_group = page.locator(".form-group:first-child")
+        
+        # 方法8：通过XPath定位（复杂场景）
+        self.username_error = page.locator("//span[@id='username-error']")
+        self.password_error = page.locator("//span[@id='password-error']")
+        self.remember_label = page.locator("//label[contains(text(),'记住我')]")
+        
+    def navigate_to_login(self):
+        """导航到登录页面"""
+        self.page.goto("/login")
+        # 验证页面加载完成
+        self.login_title.wait_for(state="visible")
+        
+    def login_with_credentials(self, username: str, password: str, remember: bool = False):
+        """使用凭据登录 - 展示不同定位方法的使用"""
+        # 使用ID定位填写用户名（最推荐）
+        self.username_input.fill(username)
+        
+        # 使用标签定位填写密码（语义化推荐）
+        self.password_by_label.fill(password)
+        
+        # 处理记住我复选框
+        if remember:
+            self.remember_checkbox.check()
+        
+        # 使用角色定位点击登录按钮（最语义化）
+        self.login_button.click()
+        
+    def verify_error_message(self, field: str, expected_message: str):
+        """验证错误信息 - 展示XPath定位的使用"""
+        if field == "username":
+            error_locator = self.username_error
+        elif field == "password":
+            error_locator = self.password_error
+        else:
+            raise ValueError(f"不支持的字段: {field}")
+            
+        # 等待错误信息出现并验证
+        error_locator.wait_for(state="visible")
+        actual_message = error_locator.text_content()
+        assert expected_message in actual_message, f"期望: {expected_message}, 实际: {actual_message}"
+        
+    def clear_form(self):
+        """清空表单 - 展示CSS选择器的批量操作"""
+        # 方法1：逐个清空
+        self.username_input.clear()
+        self.password_input.clear()
+        
+        # 方法2：批量清空所有输入框
+        all_inputs = self.page.locator("input[type='text'], input[type='password']")
+        for i in range(all_inputs.count()):
+            all_inputs.nth(i).clear()
+```
+
+**对应的测试用例：**
+```python
+import pytest
+from tests.base_test import BaseTest
+from pages.login_page import LoginPage
+
+class TestLoginPageLocators(BaseTest):
+    """登录页面定位器测试 - 展示实际使用"""
+    
+    def setup_method(self):
+        """测试前置设置"""
+        super().setup_method()
+        self.login_page = LoginPage(self.page)
+        self.login_page.navigate_to_login()
+        
+    def test_all_locators_are_accessible(self):
+        """测试所有定位器都能正常访问元素"""
+        # 验证页面标题
+        assert self.login_page.login_title.is_visible()
+        assert "用户登录" in self.login_page.login_title.text_content()
+        
+        # 验证输入框可见性（多种定位方法）
+        assert self.login_page.username_input.is_visible()  # ID定位
+        assert self.login_page.username_by_label.is_visible()  # 标签定位
+        assert self.login_page.username_by_placeholder.is_visible()  # 占位符定位
+        
+        # 验证按钮可见性
+        assert self.login_page.login_button.is_visible()  # 角色定位
+        assert self.login_page.reset_button.is_visible()
+        
+    def test_successful_login_flow(self):
+        """测试成功登录流程"""
+        # 使用页面对象方法登录
+        self.login_page.login_with_credentials(
+            username="testuser",
+            password="testpass123",
+            remember=True
+        )
+        
+        # 验证登录成功（假设跳转到首页）
+        self.page.wait_for_url("**/dashboard")
+        
+    def test_form_validation_errors(self):
+        """测试表单验证错误"""
+        # 不填写任何信息直接提交
+        self.login_page.login_button.click()
+        
+        # 验证错误信息显示
+        self.login_page.verify_error_message("username", "用户名不能为空")
+        self.login_page.verify_error_message("password", "密码不能为空")
+```
+
+#### 2. 动态元素定位处理方案
+
+**场景1：等待元素出现**
+```python
+class DynamicContentPage(BasePage):
+    """动态内容页面处理"""
+    
+    def wait_for_search_results(self, timeout: int = 10000):
+        """等待搜索结果加载"""
+        # 方法1：等待特定元素出现
+        results_container = self.page.locator(".search-results")
+        results_container.wait_for(state="visible", timeout=timeout)
+        
+        # 方法2：等待加载指示器消失
+        loading_spinner = self.page.locator(".loading-spinner")
+        loading_spinner.wait_for(state="hidden", timeout=timeout)
+        
+        # 方法3：等待网络请求完成
+        self.page.wait_for_load_state("networkidle")
+        
+    def handle_dynamic_table(self):
+        """处理动态表格数据"""
+        # 等待表格加载
+        table = self.page.locator("table.data-table")
+        table.wait_for(state="visible")
+        
+        # 等待至少有一行数据
+        first_row = self.page.locator("table.data-table tbody tr:first-child")
+        first_row.wait_for(state="visible")
+        
+        # 获取动态生成的行数
+        rows = self.page.locator("table.data-table tbody tr")
+        row_count = rows.count()
+        print(f"表格共有 {row_count} 行数据")
+        
+    def interact_with_ajax_content(self):
+        """与AJAX加载的内容交互"""
+        # 触发AJAX请求
+        load_more_btn = self.page.locator("#load-more")
+        load_more_btn.click()
+        
+        # 等待新内容加载（通过元素数量变化判断）
+        items_before = self.page.locator(".item").count()
+        
+        # 等待新元素出现
+        self.page.wait_for_function(
+            f"document.querySelectorAll('.item').length > {items_before}",
+            timeout=10000
+        )
+        
+        items_after = self.page.locator(".item").count()
+        print(f"加载前: {items_before} 项，加载后: {items_after} 项")
+```
+
+**场景2：处理动态ID和类名**
+```python
+class DynamicAttributePage(BasePage):
+    """动态属性页面处理"""
+    
+    def locate_dynamic_id_element(self, base_id: str):
+        """定位动态ID元素"""
+        # 方法1：使用部分匹配
+        dynamic_element = self.page.locator(f"[id*='{base_id}']")
+        
+        # 方法2：使用正则表达式
+        regex_locator = self.page.locator(f"[id~='{base_id}-\\d+']")
+        
+        # 方法3：使用XPath contains函数
+        xpath_locator = self.page.locator(f"//div[contains(@id, '{base_id}')]")
+        
+        return dynamic_element
+        
+    def handle_timestamp_elements(self):
+        """处理包含时间戳的元素"""
+        # 定位包含时间戳的元素（如：item-1703123456789）
+        timestamp_items = self.page.locator("[id^='item-'][id*='-']")
+        
+        # 获取所有匹配的元素
+        count = timestamp_items.count()
+        for i in range(count):
+            item = timestamp_items.nth(i)
+            item_id = item.get_attribute("id")
+            print(f"找到动态元素: {item_id}")
+```
+
+#### 3. 定位失败时的调试技巧
+
+**调试技巧1：元素可见性检查**
+```python
+class DebuggingHelper:
+    """定位调试辅助类"""
+    
+    @staticmethod
+    def debug_element_state(page: Page, locator_string: str):
+        """调试元素状态"""
+        locator = page.locator(locator_string)
+        
+        print(f"\n=== 调试定位器: {locator_string} ===")
+        
+        # 检查元素是否存在
+        count = locator.count()
+        print(f"匹配到的元素数量: {count}")
+        
+        if count == 0:
+            print("❌ 元素不存在，请检查定位器语法")
+            return False
+            
+        if count > 1:
+            print(f"⚠️  匹配到多个元素({count}个)，建议使用更精确的定位器")
+            
+        # 检查第一个元素的状态
+        first_element = locator.first
+        
+        try:
+            is_visible = first_element.is_visible()
+            is_enabled = first_element.is_enabled()
+            is_editable = first_element.is_editable()
+            
+            print(f"可见性: {'✅' if is_visible else '❌'} {is_visible}")
+            print(f"可用性: {'✅' if is_enabled else '❌'} {is_enabled}")
+            print(f"可编辑: {'✅' if is_editable else '❌'} {is_editable}")
+            
+            # 获取元素属性
+            tag_name = first_element.evaluate("el => el.tagName")
+            class_name = first_element.get_attribute("class")
+            id_attr = first_element.get_attribute("id")
+            
+            print(f"标签名: {tag_name}")
+            print(f"类名: {class_name}")
+            print(f"ID: {id_attr}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ 检查元素状态时出错: {e}")
+            return False
+    
+    @staticmethod
+    def suggest_alternative_locators(page: Page, text_content: str = None, tag_name: str = None):
+        """建议替代定位器"""
+        print("\n=== 建议的替代定位器 ===")
+        
+        if text_content:
+            print(f"基于文本内容的定位器:")
+            print(f"  page.get_by_text('{text_content}')")
+            print(f"  page.locator('text={text_content}')")
+            print(f"  page.locator('//*[contains(text(), \"{text_content}\")]')")
+            
+        if tag_name:
+            print(f"基于标签的定位器:")
+            print(f"  page.locator('{tag_name}')")
+            print(f"  page.locator('//{tag_name}')")
+            
+    @staticmethod
+    def wait_and_retry_locator(page: Page, locator_string: str, max_attempts: int = 3):
+        """等待并重试定位"""
+        for attempt in range(max_attempts):
+            try:
+                print(f"\n尝试第 {attempt + 1} 次定位: {locator_string}")
+                
+                locator = page.locator(locator_string)
+                
+                # 等待元素出现
+                locator.wait_for(state="visible", timeout=5000)
+                
+                print("✅ 定位成功！")
+                return locator
+                
+            except Exception as e:
+                print(f"❌ 第 {attempt + 1} 次尝试失败: {e}")
+                
+                if attempt < max_attempts - 1:
+                    print("等待2秒后重试...")
+                    page.wait_for_timeout(2000)
+                    
+        print(f"❌ 所有尝试都失败了，请检查定位器或页面状态")
+        return None
+```
+
+**使用调试辅助类：**
+```python
+class TestWithDebugging(BaseTest):
+    """带调试功能的测试"""
+    
+    def test_with_debugging(self):
+        """使用调试功能的测试"""
+        # 调试元素状态
+        DebuggingHelper.debug_element_state(self.page, "#username")
+        
+        # 等待并重试定位
+        username_input = DebuggingHelper.wait_and_retry_locator(
+            self.page, "#username"
+        )
+        
+        if username_input:
+            username_input.fill("testuser")
+        
+        # 建议替代定位器
+        DebuggingHelper.suggest_alternative_locators(
+            self.page, 
+            text_content="登录", 
+            tag_name="button"
+        )
+```
+
+#### 4. 最佳实践建议
+
+**实践1：定位器优先级策略**
+```python
+class LocatorBestPractices:
+    """定位器最佳实践"""
+    
+    # 推荐优先级（从高到低）
+    LOCATOR_PRIORITY = [
+        "get_by_role()",      # 1. 语义化角色定位（最推荐）
+        "get_by_label()",     # 2. 标签文本定位
+        "get_by_placeholder()", # 3. 占位符定位
+        "get_by_text()",      # 4. 文本内容定位
+        "#id",                # 5. ID定位
+        "[data-testid]",      # 6. 测试ID定位
+        ".class",             # 7. CSS类定位
+        "[name]",             # 8. name属性定位
+        "tag[attribute]",     # 9. 属性定位
+        "//xpath",            # 10. XPath定位（最后选择）
+    ]
+    
+    @staticmethod
+    def create_robust_locator(page: Page, element_info: dict):
+        """创建健壮的定位器"""
+        # 优先使用语义化定位
+        if element_info.get('role') and element_info.get('name'):
+            return page.get_by_role(element_info['role'], name=element_info['name'])
+            
+        # 其次使用标签定位
+        if element_info.get('label'):
+            return page.get_by_label(element_info['label'])
+            
+        # 再次使用占位符定位
+        if element_info.get('placeholder'):
+            return page.get_by_placeholder(element_info['placeholder'])
+            
+        # 最后使用ID或CSS定位
+        if element_info.get('id'):
+            return page.locator(f"#{element_info['id']}")
+            
+        if element_info.get('css'):
+            return page.locator(element_info['css'])
+            
+        raise ValueError("无法创建有效的定位器")
+```
+
+### 📋 附加说明
+
+#### 1. 定位器编写规范
+
+**命名规范：**
+```python
+# ✅ 好的命名
+username_input = page.locator("#username")
+login_button = page.get_by_role("button", name="登录")
+user_profile_link = page.get_by_role("link", name="个人资料")
+
+# ❌ 不好的命名
+input1 = page.locator("#username")
+btn = page.get_by_role("button", name="登录")
+link = page.get_by_role("link", name="个人资料")
+```
+
+**组织结构：**
+```python
+class LoginPage(BasePage):
+    """登录页面 - 良好的定位器组织"""
+    
+    def __init__(self, page: Page):
+        super().__init__(page)
+        
+        # 按功能区域分组
+        # === 表单元素 ===
+        self.username_input = page.get_by_label("用户名")
+        self.password_input = page.get_by_label("密码")
+        self.remember_checkbox = page.get_by_label("记住我")
+        
+        # === 操作按钮 ===
+        self.login_button = page.get_by_role("button", name="登录")
+        self.reset_button = page.get_by_role("button", name="重置")
+        
+        # === 导航链接 ===
+        self.register_link = page.get_by_role("link", name="注册")
+        self.forgot_password_link = page.get_by_role("link", name="忘记密码")
+        
+        # === 状态元素 ===
+        self.error_message = page.locator(".error-message")
+        self.success_message = page.locator(".success-message")
+```
+
+#### 2. 定位稳定性建议
+
+**稳定性原则：**
+```python
+# ✅ 稳定的定位器（推荐）
+# 1. 基于用户可见的文本
+login_btn = page.get_by_role("button", name="登录")
+
+# 2. 基于语义化的HTML结构
+username_field = page.get_by_label("用户名")
+
+# 3. 基于稳定的ID（如果确保不变）
+user_menu = page.locator("#user-menu")
+
+# 4. 基于测试专用属性
+submit_btn = page.locator("[data-testid='submit-button']")
+
+# ❌ 不稳定的定位器（避免）
+# 1. 基于复杂的CSS路径
+bad_locator1 = page.locator("div > div:nth-child(3) > form > button:first-child")
+
+# 2. 基于动态生成的类名
+bad_locator2 = page.locator(".css-1a2b3c4d5e")
+
+# 3. 基于绝对XPath路径
+bad_locator3 = page.locator("/html/body/div[1]/div[2]/form/button[1]")
+```
+
+#### 3. 常见错误及解决方法
+
+**错误1：元素未找到**
+```python
+# 问题：元素可能还未加载
+# ❌ 错误做法
+username_input = page.locator("#username")
+username_input.fill("testuser")  # 可能失败
+
+# ✅ 正确做法
+username_input = page.locator("#username")
+username_input.wait_for(state="visible")  # 等待元素可见
+username_input.fill("testuser")
+```
+
+**错误2：定位到多个元素**
+```python
+# 问题：定位器匹配了多个元素
+# ❌ 错误做法
+buttons = page.locator("button")  # 可能匹配多个按钮
+buttons.click()  # 不确定点击哪个
+
+# ✅ 正确做法
+# 方法1：使用更精确的定位器
+login_button = page.get_by_role("button", name="登录")
+login_button.click()
+
+# 方法2：使用索引选择特定元素
+first_button = page.locator("button").first
+first_button.click()
+
+# 方法3：使用nth()方法
+second_button = page.locator("button").nth(1)
+second_button.click()
+```
+
+**错误3：元素不可交互**
+```python
+# 问题：元素存在但不可点击
+# ❌ 错误做法
+button = page.locator("#submit-btn")
+button.click()  # 可能元素被遮挡或禁用
+
+# ✅ 正确做法
+button = page.locator("#submit-btn")
+# 等待元素可点击
+button.wait_for(state="visible")
+button.wait_for(state="enabled")
+# 确保元素在视口内
+button.scroll_into_view_if_needed()
+button.click()
+```
+
+#### 4. 性能优化提示
+
+**优化技巧：**
+```python
+class PerformanceOptimizedPage(BasePage):
+    """性能优化的页面对象"""
+    
+    def __init__(self, page: Page):
+        super().__init__(page)
+        
+        # ✅ 好的做法：缓存定位器
+        self._username_input = None
+        self._login_button = None
     
     @property
-    def url(self) -> str:
-        return "http://localhost:8000/practice_page.html"
+    def username_input(self):
+        """延迟初始化定位器"""
+        if self._username_input is None:
+            self._username_input = self.page.get_by_label("用户名")
+        return self._username_input
     
     @property
-    def title(self) -> str:
-        return "Playwright 练习页面"
+    def login_button(self):
+        """延迟初始化定位器"""
+        if self._login_button is None:
+            self._login_button = self.page.get_by_role("button", name="登录")
+        return self._login_button
     
-    # 页面元素定位器
-    USERNAME_INPUT = "[data-testid='username-input']"
-    EMAIL_INPUT = "[data-testid='email-input']"
-    AGE_INPUT = "[data-testid='age-input']"
-    SUBMIT_BUTTON = "[data-testid='submit-btn']"
-    SUCCESS_MESSAGE = ".success-message"
+    def batch_fill_form(self, form_data: dict):
+        """批量填写表单（减少定位次数）"""
+        # ✅ 一次性获取所有需要的元素
+        form_fields = {
+            'username': self.page.get_by_label("用户名"),
+            'password': self.page.get_by_label("密码"),
+            'email': self.page.get_by_label("邮箱"),
+        }
+        
+        # 批量填写
+        for field_name, locator in form_fields.items():
+            if field_name in form_data:
+                locator.fill(form_data[field_name])
     
-    def fill_basic_form(self, username: str, email: str, age: int) -> 'PracticePage':
-        """填写基础表单"""
-        return (self
-                .fill(self.USERNAME_INPUT, username)
-                .fill(self.EMAIL_INPUT, email)
-                .fill(self.AGE_INPUT, str(age)))
+    def wait_for_page_ready(self):
+        """等待页面完全加载"""
+        # 等待关键元素出现
+        self.username_input.wait_for(state="visible")
+        
+        # 等待网络请求完成
+        self.page.wait_for_load_state("networkidle")
+        
+        # 等待动画完成（如果有）
+        self.page.wait_for_timeout(500)
+```
+
+**总结：**
+- 🎯 **优先使用语义化定位器**：`get_by_role()`, `get_by_label()` 等
+- 🔍 **避免脆弱的定位器**：复杂的CSS路径、绝对XPath等
+- ⏱️ **合理使用等待机制**：确保元素可见、可用后再操作
+- 🐛 **善用调试工具**：定位失败时系统性排查问题
+- 📈 **注意性能优化**：缓存定位器、减少重复查找
+- 📝 **保持代码整洁**：良好的命名和组织结构
+
+通过掌握这些定位技术和最佳实践，你将能够编写出稳定、高效、易维护的自动化测试代码！
+
+### 高级定位技巧
+
+#### 1. 动态元素定位
+
+```python
+class DynamicElementPage(BasePage):
+    def wait_for_dynamic_element(self, element_id: str):
+        """等待动态元素出现"""
+        locator = self.page.locator(f"#{element_id}")
+        locator.wait_for(state="visible", timeout=10000)
+        return locator
     
-    def submit_form(self) -> 'PracticePage':
-        """提交表单"""
-        return self.click(self.SUBMIT_BUTTON)
+    def handle_loading_state(self):
+        """处理加载状态"""
+        # 等待加载完成
+        self.page.wait_for_load_state("networkidle")
+        
+        # 等待特定元素消失
+        loading_spinner = self.page.locator(".loading-spinner")
+        loading_spinner.wait_for(state="hidden")
+```
+
+#### 2. iframe处理
+
+```python
+class IframePage(BasePage):
+    def interact_with_iframe(self):
+        """与iframe中的元素交互"""
+        # 获取iframe
+        iframe = self.page.frame_locator("iframe[name='content']")
+        
+        # 在iframe中定位元素
+        iframe_input = iframe.locator("#iframe-input")
+        iframe_input.fill("iframe中的文本")
+        
+        # 点击iframe中的按钮
+        iframe_button = iframe.locator("button[type='submit']")
+        iframe_button.click()
+```
+
+#### 3. 复杂表单处理
+
+```python
+class ComplexFormPage(BasePage):
+    def fill_complex_form(self, form_data: dict):
+        """填写复杂表单"""
+        # 下拉选择
+        self.page.select_option("select[name='country']", form_data['country'])
+        
+        # 单选按钮
+        self.page.check(f"input[value='{form_data['gender']}']")
+        
+        # 复选框
+        for hobby in form_data['hobbies']:
+            self.page.check(f"input[value='{hobby}']")
+        
+        # 文件上传
+        self.page.set_input_files("input[type='file']", form_data['file_path'])
+```
+
+### 定位最佳实践
+
+#### 1. 定位器优先级
+
+```python
+# 推荐优先级（从高到低）
+1. get_by_role()      # 语义化，最稳定
+2. get_by_text()      # 用户可见文本
+3. get_by_label()     # 表单标签
+4. get_by_test_id()   # 测试专用ID
+5. CSS选择器          # 简洁明了
+6. XPath             # 复杂场景
+```
+
+#### 2. 稳定性定位策略
+
+```python
+class StableLocatorPage(BasePage):
+    # ❌ 不推荐：依赖位置
+    first_button = "button:nth-child(1)"
     
-    def is_form_submitted_successfully(self) -> bool:
-        """检查表单是否提交成功"""
-        return self.is_visible(self.SUCCESS_MESSAGE)
+    # ❌ 不推荐：依赖样式类
+    submit_btn = ".btn-primary"
     
-    def get_success_message(self) -> str:
-        """获取成功消息"""
-        return self.get_text(self.SUCCESS_MESSAGE)
+    # ✅ 推荐：语义化定位
+    submit_button = "button[type='submit']"
     
-    def select_hobbies(self, hobbies: List[str]) -> 'PracticePage':
-        """选择兴趣爱好"""
-        for hobby in hobbies:
-            self.click(f"[data-testid='hobby-{hobby}']", force=True)
+    # ✅ 推荐：测试ID
+    login_form = "[data-testid='login-form']"
+    
+    # ✅ 推荐：角色定位
+    def get_submit_button(self):
+        return self.page.get_by_role("button", name="提交")
+```
+
+## 💻 代码示例
+
+### 项目结构概览
+
+```
+PlaywrightProject/
+├── pages/                    # 页面对象模型
+│   ├── base_page.py         # 页面基类
+│   └── simple_practice_page.py  # 具体页面类
+├── tests/                   # 测试用例
+│   ├── base_test.py        # 测试基类
+│   └── test_simple_practice_pom.py  # POM模式测试
+├── utils/                   # 工具类
+│   └── screenshot_helper.py # 截图助手
+└── practice_page.html      # 测试页面
+```
+
+### POM模式完整实现示例
+
+本章节展示基于POM (Page Object Model) 模式的完整代码实现，包括传统方式与POM方式的对比。通过实际代码演示POM模式的优势和最佳实践。
+
+#### 1. 传统方式 vs POM方式对比
+
+**传统方式问题：**
+```python
+def test_basic_form_input(self, page: Page):
+    """测试基本表单输入 - 传统方式"""
+    page.goto("http://localhost:8000/practice_page.html")
+    
+    # ❌ 问题1: 选择器分散在测试用例中，难以维护
+    page.fill("[data-testid='username-input']", "testuser")
+    page.fill("[data-testid='password-input']", "password123")
+    page.fill("[data-testid='email-input']", "test@example.com")
+    
+    # ❌ 问题2: 重复的验证代码，缺乏复用性
+    expect(page.locator("[data-testid='username-input']")).to_have_value("testuser")
+    expect(page.locator("[data-testid='email-input']")).to_have_value("test@example.com")
+    
+    # ❌ 问题3: 技术细节与业务逻辑混合，可读性差
+```
+
+**POM方式解决：**
+```python
+def test_basic_form_input(self):
+    """测试基本表单输入 - POM版本"""
+    with allure.step("导航到页面"):
+        self.practice_page.goto_practice_page()
+    
+    with allure.step("填写并验证表单输入"):
+        (self.practice_page  # ✅ 优势1: 链式调用，代码简洁
+         .fill_basic_form_inputs("testuser", "password123", "test@example.com")
+         .verify_form_input_values("testuser", "test@example.com"))  # ✅ 优势2: 业务语义清晰
+    
+    # ✅ 优势3: 选择器集中管理，易于维护
+    # ✅ 优势4: Allure步骤自动生成详细报告
+```
+
+#### 2. POM模式核心组件
+
+**页面基类 (BasePage)：**
+```python
+from abc import ABC
+from playwright.sync_api import Page, Locator
+from utils.screenshot_helper import ScreenshotHelper
+import allure
+
+class BasePage(ABC):
+    """页面对象模型基类"""
+    
+    def __init__(self, page: Page):
+        self.page = page
+        self.screenshot_helper = ScreenshotHelper(page)
+        self.timeout = 10000
+    
+    def click(self, selector: str, timeout: int = None) -> 'BasePage':
+        """点击元素"""
+        timeout = timeout or self.timeout
+        self.page.locator(selector).click(timeout=timeout)
         return self
     
-    def handle_confirm_dialog(self, accept: bool = True) -> 'PracticePage':
-        """处理确认对话框"""
-        self.page.on("dialog", lambda dialog: dialog.accept() if accept else dialog.dismiss())
+    def fill(self, selector: str, value: str, timeout: int = None) -> 'BasePage':
+        """填写输入框"""
+        timeout = timeout or self.timeout
+        self.page.locator(selector).fill(value, timeout=timeout)
+        return self
+    
+    def get_element(self, selector: str, timeout: int = None) -> Locator:
+        """获取页面元素"""
+        timeout = timeout or self.timeout
+        return self.page.locator(selector).first
+    
+    def wait_for_element(self, selector: str, state: str = "visible", timeout: int = None) -> 'BasePage':
+        """等待元素状态"""
+        timeout = timeout or self.timeout
+        self.page.locator(selector).wait_for(state=state, timeout=timeout)
         return self
 ```
 
-### 3. 数据驱动测试示例
+**具体页面类 (SimplePracticePage)：**
+```python
+from pages.base_page import BasePage
+from playwright.sync_api import Page, expect
+import allure
+
+class SimplePracticePage(BasePage):
+    """简化练习页面类 - POM模式实现"""
+    
+    def __init__(self, page: Page):
+        super().__init__(page)
+        
+        # 元素定位器集中管理
+        self.username_input = "[data-testid='username-input']"
+        self.password_input = "[data-testid='password-input']"
+        self.email_input = "[data-testid='email-input']"
+        self.country_select = "[data-testid='country-select']"
+        self.hobby_reading = "[data-testid='hobby-reading']"
+        self.hobby_music = "[data-testid='hobby-music']"
+        self.hobby_sports = "[data-testid='hobby-sports']"
+        self.submit_btn = "[data-testid='submit-btn']"
+        self.form_alert = "#form-alert"
+    
+    @allure.step("导航到练习页面")
+    def goto_practice_page(self):
+        """导航到练习页面"""
+        self.page.goto("http://localhost:8000/practice_page.html")
+        return self
+    
+    @allure.step("填写基本表单")
+    def fill_basic_form_inputs(self, username: str, password: str, email: str):
+        """填写基本表单输入"""
+        self.fill(self.username_input, username)
+        self.fill(self.password_input, password)
+        self.fill(self.email_input, email)
+        return self  # 支持链式调用
+    
+    @allure.step("验证表单输入值")
+    def verify_form_input_values(self, username: str, email: str):
+        """验证表单输入值"""
+        expect(self.page.locator(self.username_input)).to_have_value(username)
+        expect(self.page.locator(self.email_input)).to_have_value(email)
+        return self
+    
+    @allure.step("选择国家: {country}")
+    def select_country_option(self, country: str):
+        """选择国家"""
+        self.page.select_option(self.country_select, country)
+        return self
+    
+    @allure.step("验证国家选择")
+    def verify_country_selection(self, expected_country: str):
+        """验证国家选择"""
+        expect(self.page.locator(self.country_select)).to_have_value(expected_country)
+        return self
+    
+    @allure.step("选择兴趣爱好")
+    def select_hobbies(self, *hobbies):
+        """选择兴趣爱好复选框"""
+        hobby_mapping = {
+            "reading": self.hobby_reading,
+            "music": self.hobby_music,
+            "sports": self.hobby_sports
+        }
+        
+        for hobby in hobbies:
+            if hobby in hobby_mapping:
+                self.page.check(hobby_mapping[hobby])
+        return self
+    
+    @allure.step("填写完整表单")
+    def fill_complete_form(self, username: str = "testuser", password: str = "password123", 
+                          email: str = "test@example.com", country: str = "china"):
+        """填写完整表单 - 业务流程封装"""
+        return (self
+                .fill_basic_form_inputs(username, password, email)
+                .select_country_option(country)
+                .select_hobbies("reading", "music"))
+    
+    @allure.step("提交表单")
+    def submit_form(self):
+        """提交表单"""
+        self.click(self.submit_btn)
+        return self
+    
+    @allure.step("验证表单提交成功")
+    def verify_form_submission_success(self):
+        """验证表单提交成功"""
+        expect(self.page.locator(self.form_alert)).to_contain_text("表单提交成功！")
+        return self
+```
+
+#### 3. POM模式优势对比
+
+| 方面 | 传统方式 | POM方式 |
+|------|----------|----------|
+| **元素定位** | 测试用例中直接写选择器 | 页面类中统一管理选择器 |
+| **页面操作** | 直接调用 page 对象方法 | 封装为页面对象的业务方法 |
+| **代码复用** | 重复代码较多 | 高度复用，链式调用 |
+| **维护性** | 选择器变更需修改多处 | 只需修改页面类中的定义 |
+| **可读性** | 技术细节和业务逻辑混合 | 业务逻辑清晰，技术细节隐藏 |
+| **测试报告** | 基本的测试步骤 | 详细的 Allure 步骤和分组 |
+
+### 测试用例类实现
+
+#### 1. 测试基类 (BaseTest)
+
+```python
+from abc import ABC
+import pytest
+from playwright.sync_api import Page, BrowserContext
+from utils.screenshot_helper import ScreenshotHelper
+import allure
+
+class BaseTest(ABC):
+    """测试基类 - POM模式"""
+    
+    @pytest.fixture(autouse=True)
+    def setup_test_context(self, page: Page, context: BrowserContext):
+        """统一的测试环境设置"""
+        self.page = page
+        self.context = context
+        self.screenshot_helper = ScreenshotHelper(page)
+        
+        # 子类可以重写此方法来设置页面对象
+        self.setup_page_objects()
+        
+        yield
+        
+        # 测试后清理
+        self.teardown_test_context()
+    
+    def setup_page_objects(self):
+        """设置页面对象 - 子类重写"""
+        pass
+    
+    def teardown_test_context(self):
+        """测试后清理"""
+        pass
+    
+    def take_screenshot(self, name: str = None):
+        """截图辅助方法"""
+        return self.screenshot_helper.take_screenshot(name)
+    
+    def assert_element_visible(self, selector: str):
+        """断言元素可见"""
+        element = self.page.locator(selector)
+        assert element.is_visible(), f"元素 {selector} 不可见"
+```
+
+#### 2. 完整测试用例 (TestSimplePracticePOM)
 
 ```python
 import pytest
-import json
-from pathlib import Path
-
-# 从JSON文件加载测试数据
-def load_test_data(filename: str) -> dict:
-    """从JSON文件加载测试数据"""
-    data_file = Path("tests/data") / filename
-    with open(data_file, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-# 参数化测试
-class TestDataDriven:
-    """数据驱动测试示例"""
-    
-    @pytest.mark.parametrize("user_data,expected_result", [
-        ({"username": "valid_user", "password": "Valid123!"}, True),
-        ({"username": "invalid_user", "password": "wrong"}, False),
-        ({"username": "", "password": "Valid123!"}, False),
-        ({"username": "valid_user", "password": ""}, False),
-    ])
-    def test_login_scenarios(self, page, user_data, expected_result):
-        """参数化登录测试"""
-        login_page = LoginPage(page)
-        login_page.navigate()
-        
-        result = login_page.login(
-            user_data["username"], 
-            user_data["password"]
-        )
-        
-        assert result == expected_result
-    
-    @pytest.mark.parametrize("test_case", load_test_data("form_validation_cases.json"))
-    def test_form_validation_cases(self, page, test_case):
-        """表单验证测试用例"""
-        practice_page = PracticePage(page)
-        practice_page.navigate()
-        
-        # 填写表单数据
-        for field, value in test_case["input_data"].items():
-            practice_page.fill(f"[data-testid='{field}-input']", value)
-        
-        practice_page.submit_form()
-        
-        # 验证期望结果
-        if test_case["expected_result"]["valid"]:
-            assert practice_page.is_form_submitted_successfully()
-        else:
-            assert practice_page.has_validation_errors()
-            for field, error_msg in test_case["expected_result"]["errors"].items():
-                assert error_msg in practice_page.get_validation_error(field)
-```
-
-### 4. API 和 UI 结合测试
-
-```python
-import requests
-from pages.user_profile_page import UserProfilePage
-
-class TestAPIUIIntegration:
-    """API 和 UI 集成测试"""
-    
-    def test_user_profile_sync(self, page, api_client):
-        """测试用户资料在API和UI之间的同步"""
-        # 通过API创建用户
-        user_data = {
-            "username": "testuser",
-            "email": "test@example.com",
-            "profile": {
-                "name": "Test User",
-                "bio": "This is a test user"
-            }
-        }
-        
-        api_response = api_client.create_user(user_data)
-        assert api_response.status_code == 201
-        user_id = api_response.json()["id"]
-        
-        # 在UI中验证用户资料
-        profile_page = UserProfilePage(page)
-        profile_page.navigate(f"/users/{user_id}")
-        
-        assert profile_page.get_username() == user_data["username"]
-        assert profile_page.get_email() == user_data["email"]
-        assert profile_page.get_bio() == user_data["profile"]["bio"]
-        
-        # 通过UI更新用户资料
-        new_bio = "Updated bio through UI"
-        profile_page.update_bio(new_bio)
-        profile_page.save_changes()
-        
-        # 通过API验证更新
-        updated_user = api_client.get_user(user_id)
-        assert updated_user.json()["profile"]["bio"] == new_bio
-```
-
-## ❓ 常见问题解答
-
-### 1. 安装和环境问题
-
-**Q: 安装 Playwright 时出现网络错误怎么办？**
-
-A: 可以尝试以下解决方案：
-```bash
-# 使用国内镜像
-export PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright/
-playwright install
-
-# 或者手动下载浏览器
-playwright install chromium --with-deps
-```
-
-**Q: 在 Linux 系统上运行测试时出现依赖错误？**
-
-A: 安装系统依赖：
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2
-
-# 或者使用 Playwright 命令
-playwright install-deps
-```
-
-**Q: Docker 环境中如何运行测试？**
-
-A: 使用提供的 Dockerfile：
-```bash
-# 构建镜像
-docker build -t playwright-tests .
-
-# 运行测试
-docker run --rm -v $(pwd)/reports:/app/reports playwright-tests
-```
-
-### 2. 测试执行问题
-
-**Q: 测试运行很慢，如何优化？**
-
-A: 优化建议：
-```python
-# 1. 使用并行执行
-pytest -n auto
-
-# 2. 启用无头模式
-# 在 env_config.py 中设置 headless=True
-
-# 3. 减少等待时间
-# 在页面对象中合理设置超时时间
-self.timeout = 5000  # 5秒而不是默认的10秒
-
-# 4. 使用更快的等待策略
-page.goto(url, wait_until="domcontentloaded")  # 而不是 "networkidle"
-```
-
-**Q: 测试在 CI 环境中不稳定怎么办？**
-
-A: 稳定性优化：
-```python
-# 1. 增加重试次数
-# pytest.ini 中设置
---reruns=3
---reruns-delay=2
-
-# 2. 使用更可靠的等待
+import allure
+from tests.base_test import BaseTest
+from pages.simple_practice_page import SimplePracticePage
 from playwright.sync_api import expect
-expect(page.locator("#element")).to_be_visible(timeout=30000)
 
-# 3. 添加显式等待
-page.wait_for_load_state("networkidle")
-page.wait_for_timeout(1000)  # 必要时添加固定等待
+@allure.feature("简化练习页面")
+@allure.story("POM模式测试")
+class TestSimplePracticePOM(BaseTest):
+    """基于POM模式的简化练习页面测试"""
+    
+    def setup_page_objects(self):
+        """设置页面对象"""
+        self.practice_page = SimplePracticePage(self.page)
+    
+    @allure.title("测试页面加载")
+    @allure.severity(allure.severity_level.BLOCKER)
+    def test_page_loads(self):
+        """测试页面是否正常加载"""
+        with allure.step("导航到页面并验证加载"):
+            self.practice_page.goto_practice_page()
+            # 验证关键元素存在
+            self.assert_element_visible(self.practice_page.username_input)
+    
+    @allure.title("测试基本表单输入")
+    @allure.severity(allure.severity_level.CRITICAL)
+    def test_basic_form_input(self):
+        """测试基本表单输入 - POM版本"""
+        with allure.step("导航到页面"):
+            self.practice_page.goto_practice_page()
+        
+        with allure.step("填写并验证表单输入"):
+            (self.practice_page
+             .fill_basic_form_inputs("testuser", "password123", "test@example.com")
+             .verify_form_input_values("testuser", "test@example.com"))
+    
+    @allure.title("测试国家选择功能")
+    @allure.severity(allure.severity_level.NORMAL)
+    def test_country_selection(self):
+        """测试国家选择功能"""
+        with allure.step("导航到页面"):
+            self.practice_page.goto_practice_page()
+        
+        with allure.step("选择并验证国家"):
+            (self.practice_page
+             .select_country_option("china")
+             .verify_country_selection("china"))
+    
+    @allure.title("测试复选框选择")
+    @allure.severity(allure.severity_level.NORMAL)
+    def test_checkbox_selection(self):
+        """测试复选框选择功能"""
+        with allure.step("导航到页面"):
+            self.practice_page.goto_practice_page()
+        
+        with allure.step("选择兴趣爱好"):
+            self.practice_page.select_hobbies("reading", "music")
+        
+        with allure.step("验证选择结果"):
+            expect(self.page.locator(self.practice_page.hobby_reading)).to_be_checked()
+            expect(self.page.locator(self.practice_page.hobby_music)).to_be_checked()
+    
+    @allure.title("测试完整业务流程")
+    @allure.severity(allure.severity_level.CRITICAL)
+    def test_complete_workflow(self):
+        """测试完整的业务流程 - 展示POM链式调用优势"""
+        with allure.step("执行完整业务流程"):
+            (self.practice_page
+             .goto_practice_page()
+             .fill_complete_form()
+             .submit_form()
+             .verify_form_submission_success())
+    
+    @allure.title("测试业务流程分步验证")
+    @allure.severity(allure.severity_level.NORMAL)
+    def test_step_by_step_workflow(self):
+        """测试分步业务流程 - 展示详细步骤"""
+        with allure.step("导航到页面"):
+            self.practice_page.goto_practice_page()
+        
+        with allure.step("填写基本信息"):
+            self.practice_page.fill_basic_form_inputs("张三", "123456", "zhangsan@test.com")
+        
+        with allure.step("选择国家和爱好"):
+            (self.practice_page
+             .select_country_option("china")
+             .select_hobbies("reading", "sports"))
+        
+        with allure.step("验证表单数据"):
+            (self.practice_page
+             .verify_form_input_values("张三", "zhangsan@test.com")
+             .verify_country_selection("china"))
+        
+        with allure.step("提交表单并验证"):
+            (self.practice_page
+             .submit_form()
+             .verify_form_submission_success())
+    
+    @allure.title("参数化测试 - 多组数据验证")
+    @allure.severity(allure.severity_level.NORMAL)
+    @pytest.mark.parametrize("username,email,country", [
+        ("user1", "user1@test.com", "china"),
+        ("user2", "user2@test.com", "usa"),
+        ("user3", "user3@test.com", "japan"),
+    ])
+    def test_form_with_multiple_data(self, username: str, email: str, country: str):
+        """测试表单填写 - 参数化测试"""
+        with allure.step(f"使用数据: {username}, {email}, {country}"):
+            (self.practice_page
+             .goto_practice_page()
+             .fill_basic_form_inputs(username, "password123", email)
+             .select_country_option(country)
+             .verify_form_input_values(username, email)
+             .verify_country_selection(country))
 ```
 
-**Q: 如何调试失败的测试？**
+#### 3. POM模式实现步骤指南
 
-A: 调试方法：
+**步骤1: 分析现有测试用例**
 ```python
-# 1. 启用调试模式
-pytest --headed --slowmo=1000 tests/test_example.py
+# 🔍 分析要点:
+# 1. 识别测试中使用的页面元素 (输入框、按钮、下拉框等)
+# 2. 分析重复的操作模式 (填写表单、提交、验证等)
+# 3. 确定需要封装的业务流程 (登录、注册、购买等)
+# 4. 找出可以复用的验证逻辑
 
-# 2. 使用 page.pause() 暂停执行
-def test_debug_example(page):
-    page.goto("https://example.com")
-    page.pause()  # 会打开浏览器调试器
-    page.click("#button")
-
-# 3. 查看详细日志
-pytest --log-cli-level=DEBUG
-
-# 4. 生成跟踪文件
-pytest --tracing=on
+# 示例分析结果:
+# - 页面元素: username_input, password_input, submit_btn
+# - 重复操作: 填写用户名密码、点击提交、验证结果
+# - 业务流程: 用户登录流程
 ```
 
-### 3. 页面对象和元素定位问题
-
-**Q: 元素定位不稳定，经常找不到元素？**
-
-A: 定位策略优化：
+**步骤2: 创建页面对象类**
 ```python
-# 1. 使用更稳定的定位器
-# 优先级：data-testid > id > class > xpath
-page.locator("[data-testid='submit-button']")  # 推荐
-page.locator("#submit-btn")                    # 其次
-page.locator(".btn-submit")                    # 再次
-page.locator("//button[text()='提交']")         # 最后
-
-# 2. 使用组合定位器
-page.locator("form").locator("[data-testid='username']")  # 更精确
-
-# 3. 等待元素状态
-page.locator("#element").wait_for(state="visible")
-page.locator("#element").wait_for(state="attached")
-```
-
-**Q: 如何处理动态内容和异步加载？**
-
-A: 动态内容处理：
-```python
-# 1. 等待特定内容出现
-expect(page.locator("#dynamic-content")).to_contain_text("加载完成")
-
-# 2. 等待网络请求完成
-with page.expect_response(lambda response: "api/data" in response.url) as response_info:
-    page.click("#load-data")
-response = response_info.value
-assert response.status == 200
-
-# 3. 等待元素数量稳定
-expect(page.locator(".list-item")).to_have_count(10)
-```
-
-### 4. 报告和日志问题
-
-**Q: Allure 报告没有生成或显示不完整？**
-
-A: 报告问题排查：
-```bash
-# 1. 确保正确生成结果文件（使用会话目录）
-pytest --alluredir=reports/test_session_$(date +%Y%m%d_%H%M%S)/allure-results --clean-alluredir
-
-# 2. 检查结果文件
-ls -la reports/test_session_*/allure-results/
-
-# 3. 生成报告
-allure generate reports/test_session_*/allure-results -o reports/test_session_*/allure-report --clean
-
-# 4. 启动报告服务
-allure serve reports/test_session_*/allure-results
-```
-
-**Q: reports目录下出现空的screenshots和videos文件夹？**
-
-A: 这个问题已在最新版本中完全修复：
-```python
-# ✅ 已修复：Helper类现在使用智能目录管理
-# - 只在实际需要时创建目录
-# - 基于测试会话隔离文件
-# - 避免创建空目录
-
-# 当前版本特性：
-# 1. 截图和视频文件按会话组织：reports/test_session_YYYYMMDD_HHMMSS/
-# 2. 只有在实际截图/录屏时才创建对应目录
-# 3. 自动清理机制，避免磁盘空间浪费
-
-# 如果使用旧版本，请更新到最新版本
-```
-
-**Q: 如何在报告中添加更多信息？**
-
-A: 报告增强：
-```python
+# 📝 页面类创建模板:
+from pages.base_page import BasePage
+from playwright.sync_api import Page, expect
 import allure
 
-@allure.feature("用户管理")
-@allure.story("用户登录")
-@allure.severity(allure.severity_level.CRITICAL)
-def test_user_login(page):
-    with allure.step("打开登录页面"):
-        page.goto("/login")
-        allure.attach(page.screenshot(), name="登录页面", attachment_type=allure.attachment_type.PNG)
+class LoginPage(BasePage):  # 1. 继承 BasePage 基类
+    def __init__(self, page: Page):
+        super().__init__(page)
+        
+        # 2. 定义页面元素选择器 (集中管理)
+        self.username_input = "[data-testid='username-input']"
+        self.password_input = "[data-testid='password-input']"
+        self.login_btn = "[data-testid='login-btn']"
+        self.error_message = ".error-message"
     
-    with allure.step("输入用户凭据"):
-        page.fill("#username", "testuser")
-        page.fill("#password", "password")
-        allure.attach("testuser", name="用户名", attachment_type=allure.attachment_type.TEXT)
+    # 3. 实现页面操作方法 (业务语义)
+    @allure.step("填写登录信息")
+    def fill_login_form(self, username: str, password: str):
+        """填写登录表单"""
+        self.fill(self.username_input, username)
+        self.fill(self.password_input, password)
+        return self  # 支持链式调用
     
-    with allure.step("点击登录按钮"):
-        page.click("#login-btn")
-        page.wait_for_url("**/dashboard")
-        allure.attach(page.url, name="登录后URL", attachment_type=allure.attachment_type.TEXT)
+    @allure.step("点击登录按钮")
+    def click_login(self):
+        """点击登录按钮"""
+        self.click(self.login_btn)
+        return self
+    
+    # 4. 添加验证方法 (分离验证逻辑)
+    @allure.step("验证登录成功")
+    def verify_login_success(self):
+        """验证登录成功"""
+        # 验证跳转到首页或显示欢迎信息
+        expect(self.page).to_have_url("/dashboard")
+        return self
+    
+    @allure.step("验证登录失败")
+    def verify_login_error(self, expected_message: str):
+        """验证登录失败信息"""
+        expect(self.page.locator(self.error_message)).to_contain_text(expected_message)
+        return self
 ```
 
-### 5. 性能和资源问题
-
-**Q: 测试运行时内存占用过高？**
-
-A: 内存优化：
+**步骤3: 重构测试用例**
 ```python
-# 1. 及时关闭页面和上下文
-@pytest.fixture
-def page(context):
-    page = context.new_page()
-    yield page
-    page.close()  # 确保关闭页面
+# 🧪 测试类重构模板:
+import pytest
+import allure
+from tests.base_test import BaseTest
+from pages.login_page import LoginPage
 
-# 2. 限制并行进程数
-pytest -n 4  # 而不是 -n auto
-
-# 3. 禁用不必要的功能
-# 在不需要时禁用视频录制
-context = browser.new_context(record_video_dir=None)
+@allure.feature("用户登录")  # 4. 添加 Allure 特性标记
+@allure.story("登录功能测试")
+class TestLogin(BaseTest):  # 1. 继承 BaseTest 基类
+    
+    def setup_page_objects(self):  # 2. 初始化页面对象
+        """设置页面对象"""
+        self.login_page = LoginPage(self.page)
+    
+    @allure.title("测试成功登录")
+    @allure.severity(allure.severity_level.CRITICAL)
+    def test_successful_login(self):
+        """测试用户成功登录"""
+        # 3. 使用页面对象方法 (替换直接页面操作)
+        with allure.step("执行登录流程"):
+            (self.login_page
+             .goto_login_page()  # 导航到登录页
+             .fill_login_form("testuser", "password123")  # 填写表单
+             .click_login()  # 点击登录
+             .verify_login_success())  # 验证成功
+    
+    @allure.title("测试登录失败")
+    @allure.severity(allure.severity_level.NORMAL)
+    @pytest.mark.parametrize("username,password,error_msg", [
+        ("", "password", "用户名不能为空"),
+        ("user", "", "密码不能为空"),
+        ("wrong", "wrong", "用户名或密码错误"),
+    ])
+    def test_login_failure(self, username: str, password: str, error_msg: str):
+        """测试登录失败场景 (参数化测试)"""
+        with allure.step(f"测试无效登录: {username}/{password}"):
+            (self.login_page
+             .goto_login_page()
+             .fill_login_form(username, password)
+             .click_login()
+             .verify_login_error(error_msg))
 ```
 
-**Q: reports目录占用磁盘空间过大？**
+**步骤4: 优化和扩展**
+```python
+# 🚀 高级优化技巧:
 
-A: 磁盘空间管理：
+# 1. 实现链式调用 - 所有方法返回 self
+class LoginPage(BasePage):
+    def fill_and_submit_login(self, username: str, password: str):
+        """复合业务流程 - 填写并提交登录"""
+        return (self
+                .fill_login_form(username, password)
+                .click_login())
+
+# 2. 添加参数化测试 - 数据驱动
+@pytest.mark.parametrize("test_data", [
+    {"user": "admin", "pwd": "admin123", "expect": "success"},
+    {"user": "guest", "pwd": "guest123", "expect": "success"},
+])
+def test_multiple_users_login(self, test_data):
+    """多用户登录测试"""
+    result = (self.login_page
+              .goto_login_page()
+              .fill_and_submit_login(test_data["user"], test_data["pwd"]))
+    
+    if test_data["expect"] == "success":
+        result.verify_login_success()
+    else:
+        result.verify_login_error("登录失败")
+
+# 3. 增强错误处理和重试机制
+class LoginPage(BasePage):
+    @allure.step("安全登录 (带重试)")
+    def safe_login(self, username: str, password: str, max_retries: int = 3):
+        """带重试机制的安全登录"""
+        for attempt in range(max_retries):
+            try:
+                self.fill_login_form(username, password)
+                self.click_login()
+                self.verify_login_success()
+                return self
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    self.take_screenshot(f"login_failed_attempt_{attempt + 1}")
+                    raise e
+                allure.attach(f"登录尝试 {attempt + 1} 失败，重试中...", 
+                            name="重试信息", attachment_type=allure.attachment_type.TEXT)
+        return self
+
+# 4. 添加日志记录和监控
+import logging
+
+class LoginPage(BasePage):
+    def __init__(self, page: Page):
+        super().__init__(page)
+        self.logger = logging.getLogger(self.__class__.__name__)
+    
+    @allure.step("监控登录性能")
+    def monitored_login(self, username: str, password: str):
+        """带性能监控的登录"""
+        import time
+        start_time = time.time()
+        
+        try:
+            result = self.fill_and_submit_login(username, password)
+            login_time = time.time() - start_time
+            
+            self.logger.info(f"登录耗时: {login_time:.2f}秒")
+            allure.attach(f"登录耗时: {login_time:.2f}秒", 
+                        name="性能指标", attachment_type=allure.attachment_type.TEXT)
+            
+            return result
+        except Exception as e:
+            self.logger.error(f"登录失败: {str(e)}")
+            raise
+```
+
+#### 4. POM模式最佳实践
+
+**命名规范：**
+- 页面类：`XxxPage`
+- 测试类：`TestXxxPOM`
+- 方法名：使用业务术语而非技术术语
+
+**方法设计：**
+- 单一职责：每个方法只做一件事
+- 返回 self：支持链式调用
+- 参数化：提供灵活的参数选项
+
+**元素定位：**
+- 优先使用 `data-testid`
+- 提供备用选择器
+- 集中管理选择器
+
+**验证方法：**
+- 分离操作和验证
+- 提供专门的验证方法
+- 使用有意义的断言消息
+
+## 🏃‍♂️ 测试运行
+
+### 智能测试运行器
+
+本项目提供了智能测试运行器 `run_tests.py`，支持多种运行方式：
+
 ```bash
-# 1. 清理旧的测试会话
-find reports/ -name "test_session_*" -mtime +7 -exec rm -rf {} \;
+# 运行所有测试
+python run_tests.py
 
-# 2. 配置自动清理（在conftest.py中）
-# 保留最近N个会话，删除更早的
-max_sessions = 10
-sessions = sorted(glob.glob("reports/test_session_*"))
-if len(sessions) > max_sessions:
-    for old_session in sessions[:-max_sessions]:
-        shutil.rmtree(old_session)
+# 运行特定测试文件
+python run_tests.py tests/test_simple_practice_pom.py
 
-# 3. 压缩历史报告
-tar -czf reports_archive_$(date +%Y%m%d).tar.gz reports/test_session_*
+# 运行特定测试类
+python run_tests.py tests/test_simple_practice_pom.py::TestSimplePracticePOM
+
+# 运行特定测试方法
+python run_tests.py tests/test_simple_practice_pom.py::TestSimplePracticePOM::test_page_loads
+
+# 详细输出模式
+python run_tests.py tests/ -v
+
+# 指定并行进程数
+python run_tests.py tests/ -n 4
+
+# 生成Allure报告
+python run_tests.py tests/ --alluredir=reports/allure-results
 ```
 
-**Q: 如何监控测试执行性能？**
+### 环境变量配置
 
-A: 性能监控：
-```python
-import time
-from utils.logger_config import logger_config
+```bash
+# 设置并行进程数
+set PARALLEL_WORKERS=4
+# 或使用 auto 自动检测
+set PARALLEL_WORKERS=auto
 
-def test_with_performance_monitoring(page):
-    start_time = time.time()
-    
-    # 执行测试操作
-    page.goto("https://example.com")
-    page.click("#button")
-    
-    end_time = time.time()
-    duration = end_time - start_time
-    
-    # 记录性能数据
-    logger_config.log_performance("页面加载和点击", duration, threshold=5.0)
-    
-    # 性能断言
-    assert duration < 10.0, f"操作耗时过长: {duration:.2f}秒"
+# 设置浏览器类型
+set BROWSER=chromium  # 或 firefox, webkit
+
+# 设置无头模式
+set HEADLESS=true
+
+# 设置超时时间（毫秒）
+set TIMEOUT=30000
+```
+
+### 报告生成
+
+```bash
+# 生成Allure报告
+python run_tests.py tests/ --alluredir=reports/allure-results
+allure serve reports/allure-results
+
+# 生成HTML报告
+python run_tests.py tests/ --html=reports/report.html --self-contained-html
 ```
 
 ## 🎯 最佳实践
 
-### 🏆 框架验证总结
+### 1. 页面对象设计原则
 
-基于30个测试用例100%通过的验证结果，以下是经过实战验证的最佳实践：
+- **单一职责**：每个页面类只负责一个页面的操作
+- **封装细节**：隐藏定位器和底层操作，提供业务级方法
+- **链式调用**：支持方法链式调用，提高代码可读性
+- **异常处理**：合理处理元素不存在、超时等异常情况
 
-**✅ 已验证的核心实践**
-- **页面对象模型**: 使用标准POM模式，提高代码复用性和可维护性
-- **智能等待策略**: 使用Playwright的自动等待机制，避免硬编码延时
-- **会话隔离**: 按测试会话组织输出文件，避免文件冲突
-- **并行执行**: 16个worker并行执行，平均1.3秒/用例的高效性能
-- **错误处理**: 完善的异常捕获和调试信息输出
+### 2. 测试用例编写规范
 
-**🎯 推荐的测试策略**
-- 优先测试核心业务流程（如表单提交、用户交互）
-- 使用数据驱动测试覆盖多种场景
-- 保持测试用例的独立性和原子性
-- 合理使用测试标记进行分类执行
+- **独立性**：每个测试用例应该独立运行，不依赖其他测试
+- **可重复**：测试结果应该稳定，多次运行结果一致
+- **清晰命名**：测试方法名应该清楚描述测试内容
+- **适当注释**：复杂逻辑添加必要的注释说明
 
-### 1. 代码组织最佳实践
+### 3. 定位器管理
 
-#### 模块化设计
-```python
-# 将复杂的页面拆分为多个组件
-class HeaderComponent(BasePage):
-    """页面头部组件"""
-    
-    def __init__(self, page: Page):
-        super().__init__(page)
-        self.container = page.locator(".header")
-    
-    def search(self, keyword: str):
-        self.container.locator("#search-input").fill(keyword)
-        self.container.locator("#search-btn").click()
-        return self
+- **集中管理**：将定位器定义在页面类中，便于维护
+- **语义化命名**：使用有意义的定位器名称
+- **稳定性优先**：选择稳定的定位方式，避免依赖易变属性
+- **分层定位**：复杂页面采用分层定位策略
 
-class NavigationComponent(BasePage):
-    """导航组件"""
-    
-    def navigate_to_section(self, section: str):
-        self.page.locator(f"[data-nav='{section}']").click()
-        return self
+### 4. 测试数据管理
 
-class HomePage(BasePage):
-    """首页，组合多个组件"""
-    
-    def __init__(self, page: Page):
-        super().__init__(page)
-        self.header = HeaderComponent(page)
-        self.navigation = NavigationComponent(page)
-```
+- **参数化测试**：使用pytest.mark.parametrize进行数据驱动测试
+- **测试数据分离**：将测试数据与测试逻辑分离
+- **环境隔离**：不同环境使用不同的测试数据
+- **数据清理**：测试后及时清理产生的测试数据
 
-#### 智能目录管理
-```python
-# 利用会话隔离机制组织测试输出
-class TestSessionManager:
-    """测试会话管理器"""
-    
-    @staticmethod
-    def get_session_dir() -> str:
-        """获取当前测试会话目录"""
-        session_dir = os.getenv('PYTEST_SESSION_DIR')
-        if not session_dir:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            session_dir = f"reports/test_session_{timestamp}"
-            os.environ['PYTEST_SESSION_DIR'] = session_dir
-        return session_dir
-    
-    @staticmethod
-    def cleanup_old_sessions(max_sessions: int = 10):
-        """清理旧的测试会话"""
-        sessions = sorted(glob.glob("reports/test_session_*"))
-        if len(sessions) > max_sessions:
-            for old_session in sessions[:-max_sessions]:
-                shutil.rmtree(old_session, ignore_errors=True)
+### 5. 错误处理和调试
 
-# 在Helper类中使用会话目录
-class ScreenshotHelper:
-    def __init__(self, session_dir: str = None):
-        self.session_dir = session_dir or TestSessionManager.get_session_dir()
-        self.screenshot_dir = os.path.join(self.session_dir, "screenshots")
-        os.makedirs(self.screenshot_dir, exist_ok=True)
-```
-
-#### 配置管理
-```python
-# 使用环境变量和配置文件
-import os
-from pathlib import Path
-
-class TestConfig:
-    """测试配置管理"""
-    
-    def __init__(self):
-        self.base_dir = Path(__file__).parent
-        self.env = os.getenv("TEST_ENV", "test")
-        self.config = self._load_config()
-    
-    def _load_config(self) -> dict:
-         """加载配置文件"""
-         config_file = self.base_dir / "config" / f"{self.env}.json"
-         if config_file.exists():
-             with open(config_file, 'r', encoding='utf-8') as f:
-                 return json.load(f)
-         return self._get_default_config()
-     
-     def _get_default_config(self) -> dict:
-         """获取默认配置"""
-         return {
-            "timeout": 30000,
-            "headless": True
-        }
-```
-
-#### 数据管理
-```python
-# 使用数据类管理测试数据
-from dataclasses import dataclass
-from typing import Optional
-
-@dataclass
-class UserData:
-    """用户数据模型"""
-    username: str
-    password: str
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    
-    def is_valid(self) -> bool:
-        """验证用户数据是否有效"""
-        return bool(self.username and self.password)
-
-@dataclass
-class TestEnvironment:
-    """测试环境数据模型"""
-    name: str
-    database_url: Optional[str] = None
-```
-
-### 2. 测试设计最佳实践
-
-#### 测试金字塔原则
-```python
-# 1. 单元测试 (70%) - 快速、稳定、隔离
-class TestFormValidation:
-    """表单验证单元测试"""
-    
-    def test_email_validation(self):
-        """测试邮箱格式验证"""
-        validator = EmailValidator()
-        assert validator.is_valid("test@example.com")
-        assert not validator.is_valid("invalid-email")
-
-# 2. 集成测试 (20%) - 测试组件间交互
-class TestUserRegistrationFlow:
-    """用户注册流程集成测试"""
-    
-    def test_complete_registration_flow(self, page, api_client):
-        """测试完整注册流程"""
-        # UI操作
-        registration_page = RegistrationPage(page)
-        registration_page.fill_registration_form(user_data)
-        
-        # API验证
-        user = api_client.get_user_by_email(user_data.email)
-        assert user.status == "pending_verification"
-
-# 3. E2E测试 (10%) - 完整业务流程
-class TestCompleteUserJourney:
-    """完整用户旅程E2E测试"""
-    
-    @pytest.mark.e2e
-    def test_user_complete_journey(self, page):
-        """测试用户完整使用旅程"""
-        # 注册 -> 登录 -> 使用功能 -> 退出
-        pass
-```
-
-#### 测试数据策略
-```python
-# 1. 测试数据工厂
-class UserDataFactory:
-    """用户数据工厂"""
-    
-    @staticmethod
-    def create_valid_user() -> UserData:
-        """创建有效用户数据"""
-        fake = Faker('zh_CN')
-        return UserData(
-            username=fake.user_name(),
-            password="Test123!",
-            email=fake.email(),
-            full_name=fake.name()
-        )
-    
-    @staticmethod
-    def create_invalid_user() -> UserData:
-        """创建无效用户数据"""
-        return UserData(username="", password="")
-
-# 2. 测试数据清理
-@pytest.fixture(autouse=True)
-def cleanup_test_data(request):
-    """自动清理测试数据"""
-    yield
-    # 测试完成后清理数据
-    if hasattr(request.node, 'test_data_ids'):
-        cleanup_users(request.node.test_data_ids)
-```
-
-### 3. 页面对象设计最佳实践
-
-#### 组件化页面对象
-```python
-# 基础组件
-class BaseComponent:
-    """基础组件类"""
-    
-    def __init__(self, page: Page, container_selector: str):
-        self.page = page
-        self.container = page.locator(container_selector)
-    
-    def is_visible(self) -> bool:
-        return self.container.is_visible()
-
-# 具体组件实现
-class SearchComponent(BaseComponent):
-    """搜索组件"""
-    
-    def __init__(self, page: Page):
-        super().__init__(page, "[data-component='search']")
-    
-    def search(self, keyword: str) -> 'SearchComponent':
-        self.container.locator("input[type='search']").fill(keyword)
-        self.container.locator("button[type='submit']").click()
-        return self
-    
-    def get_results_count(self) -> int:
-        return self.container.locator(".search-result").count()
-
-# 页面组合组件
-class HomePage(BasePage):
-    """首页，组合多个组件"""
-    
-    def __init__(self, page: Page):
-        super().__init__(page)
-        self.search = SearchComponent(page)
-        self.navigation = NavigationComponent(page)
-        self.header = HeaderComponent(page)
-```
-
-#### 智能等待策略
-```python
-class SmartWaitMixin:
-    """智能等待混入类"""
-    
-    def wait_for_ajax_complete(self, timeout: int = 30000) -> None:
-        """等待AJAX请求完成"""
-        self.page.wait_for_function(
-            "() => window.jQuery && jQuery.active === 0",
-            timeout=timeout
-        )
-    
-    def wait_for_loading_complete(self, timeout: int = 30000) -> None:
-        """等待加载完成"""
-        # 等待加载指示器消失
-        self.page.wait_for_selector(".loading", state="hidden", timeout=timeout)
-    
-    def wait_for_element_stable(self, selector: str, timeout: int = 10000) -> None:
-        """等待元素位置稳定"""
-        element = self.page.locator(selector)
-        previous_box = None
-        
-        for _ in range(10):  # 最多检查10次
-            current_box = element.bounding_box()
-            if previous_box and previous_box == current_box:
-                return  # 位置稳定
-            previous_box = current_box
-            self.page.wait_for_timeout(100)
-        
-        raise TimeoutError(f"元素 {selector} 位置未稳定")
-```
-
-### 4. 测试执行最佳实践
-
-#### 并行执行优化
-```python
-# pytest.ini 配置
-[pytest]
-# 并行执行配置
-addopts = 
-    -n auto                    # 自动检测CPU核心数
-    --dist=worksteal          # 工作窃取算法
-    --maxfail=5               # 最多失败5个就停止
-    --tb=short                # 简短错误信息
-
-# 测试分组
-markers =
-    parallel: 可以并行执行的测试
-    serial: 必须串行执行的测试
-    database: 需要数据库的测试
-```
-
-#### 测试隔离策略
-```python
-# 1. 数据隔离
-@pytest.fixture(scope="function")
-def isolated_user(api_client):
-    """为每个测试创建独立用户"""
-    user = api_client.create_user(UserDataFactory.create_valid_user())
-    yield user
-    api_client.delete_user(user.id)  # 测试后清理
-
-# 2. 浏览器隔离
-@pytest.fixture(scope="function")
-def clean_browser_context(browser):
-    """为每个测试创建干净的浏览器上下文"""
-    context = browser.new_context(
-        viewport={"width": 1920, "height": 1080},
-        locale="zh-CN",
-        timezone_id="Asia/Shanghai"
-    )
-    yield context
-    context.close()
-```
-
-### 5. 错误处理和调试最佳实践
-
-#### 智能错误恢复
-```python
-class ErrorRecoveryMixin:
-    """错误恢复混入类"""
-    
-    def retry_on_stale_element(self, action_func, max_retries: int = 3):
-        """在元素过期时重试操作"""
-        for attempt in range(max_retries):
-            try:
-                return action_func()
-            except Exception as e:
-                if "stale element" in str(e).lower() and attempt < max_retries - 1:
-                    self.page.wait_for_timeout(1000)  # 等待1秒后重试
-                    continue
-                raise
-    
-    def handle_unexpected_popup(self, action_func):
-        """处理意外弹窗"""
-        def popup_handler(dialog):
-            logger.warning(f"处理意外弹窗: {dialog.message}")
-            dialog.accept()
-        
-        self.page.on("dialog", popup_handler)
-        try:
-            return action_func()
-        finally:
-            self.page.remove_listener("dialog", popup_handler)
-```
-
-#### 详细错误报告
-```python
-class DetailedErrorReporting:
-    """详细错误报告"""
-    
-    @staticmethod
-    def capture_failure_context(page: Page, test_name: str) -> dict:
-        """捕获失败时的上下文信息"""
-        context = {
-            "timestamp": datetime.now().isoformat(),
-            "test_name": test_name,
-            "url": page.url,
-            "title": page.title(),
-            "viewport": page.viewport_size,
-            "user_agent": page.evaluate("navigator.userAgent"),
-            "local_storage": page.evaluate("JSON.stringify(localStorage)"),
-            "session_storage": page.evaluate("JSON.stringify(sessionStorage)"),
-            "cookies": page.context.cookies(),
-            "console_logs": [],  # 需要在测试开始时收集
-            "network_logs": []   # 需要在测试开始时收集
-        }
-        
-        # 截图
-        screenshot_path = f"reports/screenshots/{test_name}_{int(time.time())}.png"
-        page.screenshot(path=screenshot_path, full_page=True)
-        context["screenshot"] = screenshot_path
-        
-        return context
-```
-
-### 6. 性能优化最佳实践
-
-#### 资源管理
-```python
-class ResourceManager:
-    """资源管理器"""
-    
-    def __init__(self):
-        self.browsers = []
-        self.contexts = []
-        self.pages = []
-    
-    def create_browser(self, **kwargs):
-        """创建浏览器实例"""
-        browser = playwright.chromium.launch(**kwargs)
-        self.browsers.append(browser)
-        return browser
-    
-    def cleanup_all(self):
-        """清理所有资源"""
-        for page in self.pages:
-            try:
-                page.close()
-            except Exception:
-                pass
-        
-        for context in self.contexts:
-            try:
-                context.close()
-            except Exception:
-                pass
-        
-        for browser in self.browsers:
-            try:
-                browser.close()
-            except Exception:
-                pass
-```
-
-#### 缓存策略
-```python
-class TestDataCache:
-    """测试数据缓存"""
-    
-    def __init__(self):
-        self._cache = {}
-        self._cache_timeout = 300  # 5分钟
-    
-    def get_or_create_user(self, user_type: str, api_client):
-        """获取或创建用户数据"""
-        cache_key = f"user_{user_type}"
-        
-        if cache_key in self._cache:
-            cached_data, timestamp = self._cache[cache_key]
-            if time.time() - timestamp < self._cache_timeout:
-                return cached_data
-        
-        # 创建新用户
-        user_data = UserDataFactory.create_user_by_type(user_type)
-        user = api_client.create_user(user_data)
-        
-        self._cache[cache_key] = (user, time.time())
-        return user
-```
-
-### 7. CI/CD 集成最佳实践
-
-#### GitHub Actions 配置
-```yaml
-# .github/workflows/test.yml
-name: 自动化测试
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  schedule:
-    - cron: '0 2 * * *'  # 每天凌晨2点运行
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9, 3.10, 3.11]
-        browser: [chromium, firefox, webkit]
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: 设置 Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: 安装依赖
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        playwright install ${{ matrix.browser }}
-        playwright install-deps
-    
-    - name: 运行测试
-      run: |
-        pytest --browser=${{ matrix.browser }} \
-               --alluredir=allure-results \
-               --html=reports/report.html \
-               --maxfail=5 \
-               -n auto
-      env:
-        TEST_ENV: ci
-        HEADLESS: true
-    
-    - name: 上传测试报告
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: test-reports-${{ matrix.browser }}
-        path: |
-          reports/
-          allure-results/
-    
-    - name: 发布 Allure 报告
-      uses: simple-elf/allure-report-action@master
-      if: always()
-      with:
-        allure_results: allure-results
-        allure_report: allure-report
-        gh_pages: gh-pages
-```
-
-#### 测试环境管理
-```python
-# 环境特定配置
-class CIEnvironmentConfig:
-    """CI环境配置"""
-    
-    @staticmethod
-    def get_ci_config() -> dict:
-        return {
-            "headless": True,
-            "slow_mo": 0,
-            "timeout": 60000,  # CI环境网络可能较慢
-            "retry_times": 3,
-            "parallel_workers": 2,  # CI环境资源有限
-            "video_record": False,  # 节省存储空间
-            "screenshot_on_failure": True
-        }
-```
-
-## 📄 许可证
-
-MIT License
-
-## 🤝 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-### 代码规范
-
-- 遵循 PEP 8 Python 代码规范
-- 使用类型提示
-- 编写完整的文档字符串
-- 保持测试覆盖率在 80% 以上
-
-## 📞 支持与联系
-
-如果您在使用过程中遇到问题或有改进建议，请通过以下方式联系：
-
-- 📧 邮箱：support@example.com
-- 🐛 问题反馈：[GitHub Issues](https://github.com/your-repo/issues)
-- 📖 文档：[项目文档](https://your-docs-site.com)
-- 💬 讨论：[GitHub Discussions](https://github.com/your-repo/discussions)
+- **截图保存**：测试失败时自动截图，便于问题定位
+- **日志记录**：记录关键操作和状态信息
+- **超时设置**：合理设置元素等待和操作超时时间
+- **重试机制**：对于不稳定的操作实现重试机制
 
 ---
 
-**感谢使用 Playwright-Pytest-Allure Web UI 自动化测试框架！** 🎉
+## 📞 技术支持
+
+如有问题或建议，请通过以下方式联系：
+
+- 📧 邮箱：support@example.com
+- 🐛 问题反馈：[GitHub Issues](https://github.com/your-repo/issues)
+- 📖 文档：[项目Wiki](https://github.com/your-repo/wiki)
+
+---
+
+**Happy Testing! 🎉**
