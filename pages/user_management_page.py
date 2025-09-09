@@ -48,14 +48,6 @@ class UserManagementPage(BasePage):
         self.user_actions = ".user-actions"
         self.edit_user_button = ".btn-sm:has-text('编辑')"
         self.delete_user_button = ".btn-sm:has-text('删除')"
-        
-        # 用户表单字段
-        self.form_name = "#name"
-        self.form_username = "#username"
-        self.form_email = "#email"
-        self.form_password = "#password"
-        self.form_role = "#role"
-        self.form_status = "#status"
         self.toggle_status_button = ".btn-sm:has-text('禁用'), .btn-sm:has-text('启用')"
         
         # 模态框
@@ -89,9 +81,6 @@ class UserManagementPage(BasePage):
         
     def click_add_user(self):
         """点击添加用户按钮"""
-        # 确保按钮可见且可点击
-        self.page.locator(self.add_user_button).wait_for(state="visible", timeout=10000)
-        self.page.locator(self.add_user_button).wait_for(state="attached", timeout=10000)
         self.click(self.add_user_button)
         self.wait_for_element(self.user_modal)
         
@@ -179,13 +168,6 @@ class UserManagementPage(BasePage):
     def click_save_user(self):
         """点击保存用户"""
         self.click(self.save_user_button)
-        # 等待操作完成（成功时模态框关闭，失败时显示错误消息）
-        try:
-            # 尝试等待模态框关闭（成功情况）
-            self.page.locator("#userModal").wait_for(state="hidden", timeout=2000)
-        except:
-            # 如果模态框没有关闭，可能是出现了错误，不做处理
-            pass
         
     def click_cancel_user_form(self):
         """点击取消用户表单"""
@@ -255,11 +237,6 @@ class UserManagementPage(BasePage):
         
     def get_error_message(self) -> str:
         """获取错误消息"""
-        # 尝试获取模态框内的错误消息
-        modal_error = self.page.locator("#userModal .error-message")
-        if modal_error.count() > 0:
-            return modal_error.text_content()
-        # 如果没有模态框错误消息，尝试获取全局错误消息
         return self.page.locator(".alert-error").text_content()
         
     def wait_for_success_message(self, timeout: int = 5000):
@@ -267,13 +244,8 @@ class UserManagementPage(BasePage):
         self.page.locator(".alert-success").wait_for(state="visible", timeout=timeout)
         
     def wait_for_error_message(self, timeout: int = 3000):
-        """等待错误消息出现"""
-        # 优先等待模态框内的错误消息
-        try:
-            self.page.locator("#userModal .error-message").wait_for(state="visible", timeout=timeout)
-        except:
-            # 如果模态框内没有错误消息，等待全局错误消息
-            self.page.locator(".alert-error").wait_for(state="visible", timeout=timeout)
+        """等待错误消息显示"""
+        self.page.locator(".alert-error").wait_for(state="visible", timeout=timeout)
         
     def wait_for_user_update(self, timeout: int = 5000):
         """等待用户信息更新"""
