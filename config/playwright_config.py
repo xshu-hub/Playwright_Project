@@ -2,6 +2,10 @@
 from playwright.sync_api import Playwright
 import os
 from typing import Dict, List, Any, Optional
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 # 环境变量配置
 ENV = os.getenv('TEST_ENV', 'test')

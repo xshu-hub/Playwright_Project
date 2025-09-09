@@ -1,8 +1,16 @@
-"""页面对象模型基类"""
+"""页面对象模型基类
+
+提供Web自动化测试的基础功能：
+1. 页面导航和等待
+2. 元素定位和操作
+3. 数据输入和验证
+4. 截图和日志记录
+5. 异常处理和重试机制
+"""
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any, Union
-from playwright.sync_api import Page, Locator, expect
+from typing import Optional, List, Dict, Any, Union, Callable
+from playwright.sync_api import Page, Locator, expect, Error
 from loguru import logger
 import allure
 
@@ -61,10 +69,10 @@ class BasePage(ABC):
         try:
             self.page.goto(target_url, wait_until=wait_until, timeout=self.long_timeout)
             self.wait_for_page_load()
-            logger.info(f"成功导航到页面: {target_url}")
+            logger.info(f"🌐 页面导航成功: {target_url}")
             return self
         except Exception as e:
-            logger.error(f"导航到页面失败: {target_url}, 错误: {str(e)}")
+            logger.error(f"❌ 页面导航失败: {target_url} | 错误: {str(e)}")
             self.screenshot_helper.take_failure_screenshot("navigation_failed", str(e))
             raise
     
@@ -120,10 +128,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.click(force=force, timeout=timeout)
-            logger.debug(f"成功点击元素: {selector}")
+            logger.info(f"🖱️ 元素点击成功: {selector}")
             return self
         except Exception as e:
-            logger.error(f"点击元素失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 元素点击失败: {selector} | 错误: {str(e)}")
             self.screenshot_helper.take_failure_screenshot("click_failed", str(e))
             raise
     
@@ -144,10 +152,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.dblclick(timeout=timeout)
-            logger.debug(f"成功双击元素: {selector}")
+            logger.info(f"🖱️ 元素双击成功: {selector}")
             return self
         except Exception as e:
-            logger.error(f"双击元素失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 元素双击失败: {selector} | 错误: {str(e)}")
             raise
     
     def fill(self, selector: str, value: str, timeout: int = None, clear: bool = True) -> 'BasePage':
@@ -171,10 +179,10 @@ class BasePage(ABC):
             if clear:
                 element.clear(timeout=timeout)
             element.fill(value, timeout=timeout)
-            logger.debug(f"成功填充元素: {selector}, 值: {value}")
+            logger.info(f"✏️ 元素填充成功: {selector} = '{value}'")
             return self
         except Exception as e:
-            logger.error(f"填充元素失败: {selector}, 值: {value}, 错误: {str(e)}")
+            logger.error(f"❌ 元素填充失败: {selector} = '{value}' | 错误: {str(e)}")
             raise
     
     def type_text(self, selector: str, text: str, delay: int = 100, timeout: int = None) -> 'BasePage':
@@ -196,10 +204,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.type(text, delay=delay, timeout=timeout)
-            logger.debug(f"成功输入文本: {selector}, 文本: {text}")
+            logger.info(f"⌨️ 文本输入成功: {selector} = '{text}'")
             return self
         except Exception as e:
-            logger.error(f"输入文本失败: {selector}, 文本: {text}, 错误: {str(e)}")
+            logger.error(f"❌ 文本输入失败: {selector} = '{text}' | 错误: {str(e)}")
             raise
     
     def select_option(self, selector: str, value: Union[str, List[str]], timeout: int = None) -> 'BasePage':
@@ -220,10 +228,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.select_option(value, timeout=timeout)
-            logger.debug(f"成功选择选项: {selector}, 值: {value}")
+            logger.info(f"📋 选项选择成功: {selector} = '{value}'")
             return self
         except Exception as e:
-            logger.error(f"选择选项失败: {selector}, 值: {value}, 错误: {str(e)}")
+            logger.error(f"❌ 选项选择失败: {selector} = '{value}' | 错误: {str(e)}")
             raise
     
     def check(self, selector: str, timeout: int = None) -> 'BasePage':
@@ -243,10 +251,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.check(timeout=timeout)
-            logger.debug(f"成功勾选元素: {selector}")
+            logger.info(f"☑️ 复选框勾选成功: {selector}")
             return self
         except Exception as e:
-            logger.error(f"勾选元素失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 复选框勾选失败: {selector} | 错误: {str(e)}")
             raise
     
     def uncheck(self, selector: str, timeout: int = None) -> 'BasePage':
@@ -266,10 +274,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.uncheck(timeout=timeout)
-            logger.debug(f"成功取消勾选元素: {selector}")
+            logger.info(f"☐ 复选框取消勾选成功: {selector}")
             return self
         except Exception as e:
-            logger.error(f"取消勾选元素失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 复选框取消勾选失败: {selector} | 错误: {str(e)}")
             raise
     
     def hover(self, selector: str, timeout: int = None) -> 'BasePage':
@@ -289,10 +297,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.hover(timeout=timeout)
-            logger.debug(f"成功悬停在元素: {selector}")
+            logger.info(f"👆 元素悬停成功: {selector}")
             return self
         except Exception as e:
-            logger.error(f"悬停元素失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 元素悬停失败: {selector} | 错误: {str(e)}")
             raise
     
     def scroll_to(self, selector: str = None, x: int = None, y: int = None) -> 'BasePage':
@@ -422,10 +430,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             text = element.text_content()
-            logger.debug(f"获取元素文本: {selector}, 文本: {text}")
+            logger.info(f"📝 元素文本获取成功: {selector} = '{text}'")
             return text or ""
         except Exception as e:
-            logger.error(f"获取元素文本失败: {selector}, 错误: {str(e)}")
+            logger.error(f"❌ 元素文本获取失败: {selector} | 错误: {str(e)}")
             raise
     
     def get_attribute(self, selector: str, attribute: str, timeout: int = None) -> Optional[str]:
@@ -444,10 +452,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             value = element.get_attribute(attribute)
-            logger.debug(f"获取元素属性: {selector}, 属性: {attribute}, 值: {value}")
+            logger.info(f"🏷️ 元素属性获取成功: {selector}[{attribute}] = '{value}'")
             return value
         except Exception as e:
-            logger.error(f"获取元素属性失败: {selector}, 属性: {attribute}, 错误: {str(e)}")
+            logger.error(f"❌ 元素属性获取失败: {selector}[{attribute}] | 错误: {str(e)}")
             raise
     
     def is_visible(self, selector: str, timeout: int = None) -> bool:
@@ -647,3 +655,332 @@ class BasePage(ABC):
         except Exception as e:
             logger.warning(f"等待网络空闲超时: {str(e)}")
             return self
+    
+    # ==================== 增强功能方法 ====================
+    
+    def retry_action(self, action_func: Callable, max_retries: int = 3, 
+                    retry_delay: float = 1.0, expected_exceptions: tuple = None) -> Any:
+        """
+        重试机制执行操作
+        
+        Args:
+            action_func: 要执行的操作函数
+            max_retries: 最大重试次数
+            retry_delay: 重试间隔(秒)
+            expected_exceptions: 期望的异常类型元组
+            
+        Returns:
+            操作结果
+            
+        Raises:
+            最后一次执行的异常
+        """
+        if expected_exceptions is None:
+            expected_exceptions = (Error, TimeoutError, AssertionError)
+        
+        last_exception = None
+        
+        for attempt in range(max_retries + 1):
+            try:
+                logger.debug(f"执行操作，尝试次数: {attempt + 1}/{max_retries + 1}")
+                result = action_func()
+                if attempt > 0:
+                    logger.info(f"操作在第 {attempt + 1} 次尝试后成功")
+                return result
+            except expected_exceptions as e:
+                last_exception = e
+                if attempt < max_retries:
+                    logger.warning(f"操作失败，{retry_delay}秒后重试: {str(e)}")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"操作在 {max_retries + 1} 次尝试后仍然失败: {str(e)}")
+        
+        raise last_exception
+    
+    def wait_for_condition(self, condition_func: Callable[[], bool], 
+                          timeout: int = None, poll_interval: float = 0.5,
+                          error_message: str = "条件等待超时") -> 'BasePage':
+        """
+        等待条件满足
+        
+        Args:
+            condition_func: 条件检查函数，返回True时停止等待
+            timeout: 超时时间(毫秒)
+            poll_interval: 轮询间隔(秒)
+            error_message: 超时错误消息
+            
+        Returns:
+            页面实例
+            
+        Raises:
+            TimeoutError: 等待超时
+        """
+        timeout = timeout or self.timeout
+        start_time = time.time() * 1000
+        
+        while True:
+            try:
+                if condition_func():
+                    logger.debug("等待条件已满足")
+                    return self
+            except Exception as e:
+                logger.debug(f"条件检查异常: {str(e)}")
+            
+            current_time = time.time() * 1000
+            if current_time - start_time >= timeout:
+                logger.error(f"等待条件超时: {error_message}")
+                raise TimeoutError(f"{error_message} (超时: {timeout}ms)")
+            
+            time.sleep(poll_interval)
+    
+    def get_elements(self, selector: str, timeout: int = None) -> List[Locator]:
+        """
+        获取多个元素
+        
+        Args:
+            selector: 元素选择器
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            元素列表
+        """
+        timeout = timeout or self.timeout
+        try:
+            elements = self.page.locator(selector).all()
+            logger.debug(f"找到 {len(elements)} 个元素: {selector}")
+            return elements
+        except Exception as e:
+            logger.error(f"获取元素列表失败 {selector}: {str(e)}")
+            return []
+    
+    def get_elements_count(self, selector: str, timeout: int = None) -> int:
+        """
+        获取元素数量
+        
+        Args:
+            selector: 元素选择器
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            元素数量
+        """
+        timeout = timeout or self.timeout
+        try:
+            count = self.page.locator(selector).count()
+            logger.debug(f"元素数量 {selector}: {count}")
+            return count
+        except Exception as e:
+            logger.error(f"获取元素数量失败 {selector}: {str(e)}")
+            return 0
+    
+    def wait_for_element_count(self, selector: str, expected_count: int, 
+                              timeout: int = None) -> 'BasePage':
+        """
+        等待元素数量达到期望值
+        
+        Args:
+            selector: 元素选择器
+            expected_count: 期望的元素数量
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            页面实例
+        """
+        def check_count():
+            return self.get_elements_count(selector) == expected_count
+        
+        self.wait_for_condition(
+            check_count, 
+            timeout, 
+            error_message=f"等待元素数量 {selector} 达到 {expected_count}"
+        )
+        return self
+    
+    def drag_and_drop(self, source_selector: str, target_selector: str, 
+                     timeout: int = None) -> 'BasePage':
+        """
+        拖拽操作
+        
+        Args:
+            source_selector: 源元素选择器
+            target_selector: 目标元素选择器
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            页面实例
+        """
+        timeout = timeout or self.timeout
+        try:
+            source = self.get_element(source_selector, timeout)
+            target = self.get_element(target_selector, timeout)
+            
+            logger.info(f"拖拽元素: {source_selector} -> {target_selector}")
+            source.drag_to(target)
+            
+            return self
+        except Exception as e:
+            logger.error(f"拖拽操作失败: {str(e)}")
+            self.take_screenshot(f"drag_drop_error_{int(time.time())}")
+            raise
+    
+    def upload_file(self, selector: str, file_path: str, timeout: int = None) -> 'BasePage':
+        """
+        文件上传
+        
+        Args:
+            selector: 文件输入框选择器
+            file_path: 文件路径
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            页面实例
+        """
+        timeout = timeout or self.timeout
+        try:
+            logger.info(f"上传文件: {file_path} 到 {selector}")
+            element = self.get_element(selector, timeout)
+            element.set_input_files(file_path)
+            
+            return self
+        except Exception as e:
+            logger.error(f"文件上传失败: {str(e)}")
+            self.take_screenshot(f"upload_error_{int(time.time())}")
+            raise
+    
+    def switch_to_frame(self, frame_selector: str, timeout: int = None) -> Page:
+        """
+        切换到iframe
+        
+        Args:
+            frame_selector: iframe选择器
+            timeout: 超时时间(毫秒)
+            
+        Returns:
+            iframe页面对象
+        """
+        timeout = timeout or self.timeout
+        try:
+            logger.info(f"切换到iframe: {frame_selector}")
+            frame_element = self.get_element(frame_selector, timeout)
+            frame = frame_element.content_frame()
+            
+            if frame is None:
+                raise ValueError(f"无法获取iframe内容: {frame_selector}")
+            
+            return frame
+        except Exception as e:
+            logger.error(f"切换iframe失败: {str(e)}")
+            raise
+    
+    def get_page_source(self) -> str:
+        """
+        获取页面源码
+        
+        Returns:
+            页面HTML源码
+        """
+        try:
+            source = self.page.content()
+            logger.debug(f"获取页面源码，长度: {len(source)}")
+            return source
+        except Exception as e:
+            logger.error(f"获取页面源码失败: {str(e)}")
+            return ""
+    
+    def clear_cookies(self) -> 'BasePage':
+        """
+        清除所有cookies
+        
+        Returns:
+            页面实例
+        """
+        try:
+            logger.info("清除所有cookies")
+            self.page.context.clear_cookies()
+            return self
+        except Exception as e:
+            logger.error(f"清除cookies失败: {str(e)}")
+            return self
+    
+    def set_cookie(self, name: str, value: str, domain: str = None, 
+                  path: str = "/", expires: int = None) -> 'BasePage':
+        """
+        设置cookie
+        
+        Args:
+            name: cookie名称
+            value: cookie值
+            domain: 域名
+            path: 路径
+            expires: 过期时间(时间戳)
+            
+        Returns:
+            页面实例
+        """
+        try:
+            cookie_data = {
+                'name': name,
+                'value': value,
+                'path': path
+            }
+            
+            if domain:
+                cookie_data['domain'] = domain
+            if expires:
+                cookie_data['expires'] = expires
+            
+            logger.info(f"设置cookie: {name}={value}")
+            self.page.context.add_cookies([cookie_data])
+            return self
+        except Exception as e:
+            logger.error(f"设置cookie失败: {str(e)}")
+            return self
+    
+    def get_cookies(self) -> List[Dict[str, Any]]:
+        """
+        获取所有cookies
+        
+        Returns:
+            cookies列表
+        """
+        try:
+            cookies = self.page.context.cookies()
+            logger.debug(f"获取到 {len(cookies)} 个cookies")
+            return cookies
+        except Exception as e:
+            logger.error(f"获取cookies失败: {str(e)}")
+            return []
+    
+    def set_viewport_size(self, width: int, height: int) -> 'BasePage':
+        """
+        设置视口大小
+        
+        Args:
+            width: 宽度
+            height: 高度
+            
+        Returns:
+            页面实例
+        """
+        try:
+            logger.info(f"设置视口大小: {width}x{height}")
+            self.page.set_viewport_size({"width": width, "height": height})
+            return self
+        except Exception as e:
+            logger.error(f"设置视口大小失败: {str(e)}")
+            return self
+    
+    def get_viewport_size(self) -> Dict[str, int]:
+        """
+        获取视口大小
+        
+        Returns:
+            视口大小字典 {'width': int, 'height': int}
+        """
+        try:
+            viewport = self.page.viewport_size
+            logger.debug(f"当前视口大小: {viewport}")
+            return viewport
+        except Exception as e:
+            logger.error(f"获取视口大小失败: {str(e)}")
+            return {'width': 0, 'height': 0}

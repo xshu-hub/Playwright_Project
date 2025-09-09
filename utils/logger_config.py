@@ -5,6 +5,8 @@ from pathlib import Path
 from datetime import datetime
 from loguru import logger
 from typing import Optional
+import time
+import hashlib
 
 
 class LoggerConfig:
@@ -22,6 +24,65 @@ class LoggerConfig:
             "ERROR": "ERROR",
             "CRITICAL": "CRITICAL"
         }
+        
+        # 日志去重缓存
+        self._log_cache = {}
+        self._cache_size_limit = 1000
+        self._dedup_window = 5  # 5秒内的重复日志将被去重
+    
+    def _should_log(self, message: str, level: str) -> bool:
+        """检查是否应该记录日志（去重检查）
+        
+        Args:
+            message: 日志消息
+            level: 日志级别
+            
+        Returns:
+            是否应该记录日志
+        """
+        # 生成消息的哈希值作为缓存键
+        message_hash = hashlib.md5(f"{level}:{message}".encode()).hexdigest()
+        current_time = time.time()
+        
+        # 检查缓存中是否存在相同的日志
+        if message_hash in self._log_cache:
+            last_time = self._log_cache[message_hash]
+            # 如果在去重窗口时间内，则跳过
+            if current_time - last_time < self._dedup_window:
+                return False
+        
+        # 更新缓存
+        self._log_cache[message_hash] = current_time
+        
+        # 清理过期的缓存项
+        self._cleanup_cache(current_time)
+        
+        return True
+    
+    def _cleanup_cache(self, current_time: float) -> None:
+        """清理过期的缓存项
+        
+        Args:
+            current_time: 当前时间戳
+        """
+        # 如果缓存超过限制，清理过期项
+        if len(self._log_cache) > self._cache_size_limit:
+            expired_keys = [
+                key for key, timestamp in self._log_cache.items()
+                if current_time - timestamp > self._dedup_window * 2
+            ]
+            for key in expired_keys:
+                del self._log_cache[key]
+    
+    def log_with_dedup(self, level: str, message: str) -> None:
+        """带去重功能的日志记录
+        
+        Args:
+            level: 日志级别
+            message: 日志消息
+        """
+        if self._should_log(message, level):
+            getattr(logger, level.lower())(message)
     
     def setup_logger(
         self,
