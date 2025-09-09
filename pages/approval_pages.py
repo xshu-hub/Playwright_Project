@@ -23,7 +23,7 @@ class ApprovalCreatePage(BasePage):
         self.approval_form = "#approvalForm"
         self.title_input = "#title"
         self.type_select = "#type"
-        self.priority_select = "#priority"
+        self.priority_selector = ".priority-selector"
         self.description_textarea = "#description"
         self.submit_button = "button[type='submit']"
         self.cancel_button = "button[type='button']"
@@ -143,7 +143,7 @@ class ApprovalListPage(BasePage):
         self.approval_actions = ".approval-actions"
         
         # 操作按钮
-        self.view_button = ".btn-view"
+        self.view_button = "button:has-text('查看详情')"
         self.approve_button = ".btn-approve"
         self.reject_button = ".btn-reject"
         
@@ -201,7 +201,8 @@ class ApprovalListPage(BasePage):
         """点击查看申请详情"""
         items = self.page.locator(self.approval_item)
         if index < items.count():
-            items.nth(index).click()
+            # 点击申请项内的查看详情按钮
+            items.nth(index).locator(self.view_button).click()
         else:
             raise IndexError(f"申请索引 {index} 超出范围")
             

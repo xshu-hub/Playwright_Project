@@ -34,7 +34,7 @@ class UserManagementPage(BasePage):
         self.users_table = "#usersTable"
         self.users_table_body = "#usersTableBody"
         self.users_count = "#usersCount"
-        self.user_row = "tr"
+        self.user_row = "#usersTableBody tr"
         
         # 用户信息
         self.user_avatar = ".user-avatar"
@@ -48,6 +48,14 @@ class UserManagementPage(BasePage):
         self.user_actions = ".user-actions"
         self.edit_user_button = ".btn-sm:has-text('编辑')"
         self.delete_user_button = ".btn-sm:has-text('删除')"
+        
+        # 用户表单字段
+        self.form_name = "#name"
+        self.form_username = "#username"
+        self.form_email = "#email"
+        self.form_password = "#password"
+        self.form_role = "#role"
+        self.form_status = "#status"
         self.toggle_status_button = ".btn-sm:has-text('禁用'), .btn-sm:has-text('启用')"
         
         # 模态框
@@ -81,12 +89,15 @@ class UserManagementPage(BasePage):
         
     def click_add_user(self):
         """点击添加用户按钮"""
-        self.click_element(self.add_user_button)
+        # 确保按钮可见且可点击
+        self.page.locator(self.add_user_button).wait_for(state="visible", timeout=10000)
+        self.page.locator(self.add_user_button).wait_for(state="attached", timeout=10000)
+        self.click(self.add_user_button)
         self.wait_for_element(self.user_modal)
         
     def search_users(self, search_term: str):
         """搜索用户"""
-        self.fill_input(self.search_input, search_term)
+        self.fill(self.search_filter, search_term)
         
     def filter_by_role(self, role: str):
         """按角色筛选"""
@@ -98,7 +109,7 @@ class UserManagementPage(BasePage):
         
     def click_refresh(self):
         """点击刷新按钮"""
-        self.click_element(self.refresh_button)
+        self.click(self.refresh_button)
         
     def get_user_count(self) -> int:
         """获取用户数量"""
@@ -124,16 +135,16 @@ class UserManagementPage(BasePage):
             "name": row.locator(self.user_name).text_content(),
             "username": row.locator(self.user_username).text_content(),
             "email": row.locator(self.user_email).text_content(),
-            "role": row.locator(self.user_role).text_content(),
-            "status": row.locator(self.user_status).text_content(),
-            "last_login": row.locator(self.user_last_login).text_content()
+            "role": row.locator(self.role_badge).text_content(),
+            "status": row.locator(self.status_badge).text_content(),
+            "last_login": row.locator("td:nth-child(6)").text_content()
         }
         
     def click_edit_user(self, index: int = 0):
         """点击编辑用户"""
         rows = self.page.locator(self.user_row)
         if index < rows.count():
-            rows.nth(index).locator(self.edit_button).click()
+            rows.nth(index).locator(self.edit_user_button).click()
             self.wait_for_element(self.user_modal)
         else:
             raise IndexError(f"用户索引 {index} 超出范围")
@@ -142,8 +153,8 @@ class UserManagementPage(BasePage):
         """点击删除用户"""
         rows = self.page.locator(self.user_row)
         if index < rows.count():
-            rows.nth(index).locator(self.delete_button).click()
-            self.wait_for_element(self.delete_modal)
+            rows.nth(index).locator(self.delete_user_button).click()
+            self.page.locator("#deleteModal").wait_for(state="visible")
         else:
             raise IndexError(f"用户索引 {index} 超出范围")
             
@@ -157,21 +168,28 @@ class UserManagementPage(BasePage):
             
     def fill_user_form(self, name: str, username: str, email: str, password: str = "", role: str = "user", status: str = "active"):
         """填写用户表单"""
-        self.fill_input(self.form_name, name)
-        self.fill_input(self.form_username, username)
-        self.fill_input(self.form_email, email)
+        self.fill(self.name_input, name)
+        self.fill(self.username_input, username)
+        self.fill(self.email_input, email)
         if password:
-            self.fill_input(self.form_password, password)
-        self.select_option(self.form_role, role)
-        self.select_option(self.form_status, status)
+            self.fill(self.password_input, password)
+        self.select_option(self.role_select, role)
+        self.select_option(self.status_select, status)
         
     def click_save_user(self):
         """点击保存用户"""
-        self.click_element(self.save_button)
+        self.click(self.save_user_button)
+        # 等待操作完成（成功时模态框关闭，失败时显示错误消息）
+        try:
+            # 尝试等待模态框关闭（成功情况）
+            self.page.locator("#userModal").wait_for(state="hidden", timeout=2000)
+        except:
+            # 如果模态框没有关闭，可能是出现了错误，不做处理
+            pass
         
     def click_cancel_user_form(self):
         """点击取消用户表单"""
-        self.click_element(self.cancel_button)
+        self.click(self.close_modal_button)
         
     def create_user(self, name: str, username: str, email: str, password: str, role: str = "user", status: str = "active"):
         """创建新用户"""
@@ -184,27 +202,27 @@ class UserManagementPage(BasePage):
         self.click_edit_user(index)
         
         if name is not None:
-            self.fill_input(self.form_name, name)
+            self.fill(self.name_input, name)
         if username is not None:
-            self.fill_input(self.form_username, username)
+            self.fill(self.username_input, username)
         if email is not None:
-            self.fill_input(self.form_email, email)
+            self.fill(self.email_input, email)
         if password is not None:
-            self.fill_input(self.form_password, password)
+            self.fill(self.password_input, password)
         if role is not None:
-            self.select_option(self.form_role, role)
+            self.select_option(self.role_select, role)
         if status is not None:
-            self.select_option(self.form_status, status)
+            self.select_option(self.status_select, status)
             
         self.click_save_user()
         
     def confirm_delete_user(self):
         """确认删除用户"""
-        self.click_element(self.delete_confirm_button)
+        self.click(".btn-danger:has-text('确认删除')")
         
     def cancel_delete_user(self):
         """取消删除用户"""
-        self.click_element(self.delete_cancel_button)
+        self.click(".btn-secondary:has-text('取消')")
         
     def delete_user(self, index: int):
         """删除用户"""
@@ -213,39 +231,49 @@ class UserManagementPage(BasePage):
         
     def close_modal(self):
         """关闭模态框"""
-        self.click_element(self.modal_close)
+        self.click(self.close_modal_button)
         
     def get_modal_title(self) -> str:
         """获取模态框标题"""
-        return self.get_element_text(self.modal_title)
+        return self.page.locator(self.modal_title).text_content()
         
     def is_user_modal_visible(self) -> bool:
         """检查用户模态框是否可见"""
-        return self.is_element_visible(self.user_modal)
+        return self.page.locator(self.user_modal).is_visible()
         
     def is_delete_modal_visible(self) -> bool:
         """检查删除确认模态框是否可见"""
-        return self.is_element_visible(self.delete_modal)
+        return self.page.locator("#deleteModal").is_visible()
         
     def is_empty_state_visible(self) -> bool:
         """检查是否显示空状态"""
-        return self.is_element_visible(self.empty_state)
+        return self.page.locator(self.empty_state).is_visible()
         
     def get_success_message(self) -> str:
         """获取成功消息"""
-        return self.get_element_text(self.success_message)
+        return self.page.locator(".alert-success").text_content()
         
     def get_error_message(self) -> str:
         """获取错误消息"""
-        return self.get_element_text(self.error_message)
+        # 尝试获取模态框内的错误消息
+        modal_error = self.page.locator("#userModal .error-message")
+        if modal_error.count() > 0:
+            return modal_error.text_content()
+        # 如果没有模态框错误消息，尝试获取全局错误消息
+        return self.page.locator(".alert-error").text_content()
         
     def wait_for_success_message(self, timeout: int = 5000):
         """等待成功消息显示"""
-        self.wait_for_element(self.success_message, timeout=timeout)
+        self.page.locator(".alert-success").wait_for(state="visible", timeout=timeout)
         
     def wait_for_error_message(self, timeout: int = 3000):
-        """等待错误消息显示"""
-        self.wait_for_element(self.error_message, timeout=timeout)
+        """等待错误消息出现"""
+        # 优先等待模态框内的错误消息
+        try:
+            self.page.locator("#userModal .error-message").wait_for(state="visible", timeout=timeout)
+        except:
+            # 如果模态框内没有错误消息，等待全局错误消息
+            self.page.locator(".alert-error").wait_for(state="visible", timeout=timeout)
         
     def wait_for_user_update(self, timeout: int = 5000):
         """等待用户信息更新"""
@@ -254,19 +282,18 @@ class UserManagementPage(BasePage):
     def get_form_values(self) -> Dict[str, str]:
         """获取表单当前值"""
         return {
-            "name": self.page.locator(self.form_name).input_value(),
-            "username": self.page.locator(self.form_username).input_value(),
-            "email": self.page.locator(self.form_email).input_value(),
-            "role": self.page.locator(self.form_role).input_value(),
-            "status": self.page.locator(self.form_status).input_value()
+            "name": self.page.locator(self.name_input).input_value(),
+            "username": self.page.locator(self.username_input).input_value(),
+            "email": self.page.locator(self.email_input).input_value(),
+            "role": self.page.locator(self.role_select).input_value(),
+            "status": self.page.locator(self.status_select).input_value()
         }
         
     def verify_page_elements(self):
         """验证页面元素"""
         expect(self.page.locator(self.page_header)).to_be_visible()
         expect(self.page.locator(self.add_user_button)).to_be_visible()
-        expect(self.page.locator(self.search_section)).to_be_visible()
-        expect(self.page.locator(self.search_input)).to_be_visible()
+        expect(self.page.locator(self.search_filter)).to_be_visible()
         expect(self.page.locator(self.role_filter)).to_be_visible()
         expect(self.page.locator(self.status_filter)).to_be_visible()
         expect(self.page.locator(self.refresh_button)).to_be_visible()
@@ -274,14 +301,14 @@ class UserManagementPage(BasePage):
         
     def verify_user_form_elements(self):
         """验证用户表单元素"""
-        expect(self.page.locator(self.form_name)).to_be_visible()
-        expect(self.page.locator(self.form_username)).to_be_visible()
-        expect(self.page.locator(self.form_email)).to_be_visible()
-        expect(self.page.locator(self.form_password)).to_be_visible()
-        expect(self.page.locator(self.form_role)).to_be_visible()
-        expect(self.page.locator(self.form_status)).to_be_visible()
-        expect(self.page.locator(self.save_button)).to_be_visible()
-        expect(self.page.locator(self.cancel_button)).to_be_visible()
+        expect(self.page.locator(self.name_input)).to_be_visible()
+        expect(self.page.locator(self.username_input)).to_be_visible()
+        expect(self.page.locator(self.email_input)).to_be_visible()
+        expect(self.page.locator(self.password_input)).to_be_visible()
+        expect(self.page.locator(self.role_select)).to_be_visible()
+        expect(self.page.locator(self.status_select)).to_be_visible()
+        expect(self.page.locator(self.save_user_button)).to_be_visible()
+        expect(self.page.locator(self.close_modal_button)).to_be_visible()
         
     def verify_user_in_list(self, username: str) -> bool:
         """验证用户是否在列表中"""
@@ -289,6 +316,9 @@ class UserManagementPage(BasePage):
         rows = self.page.locator(self.user_row)
         for i in range(rows.count()):
             user_username = rows.nth(i).locator(self.user_username).text_content()
+            # 移除@符号
+            if user_username and user_username.startswith('@'):
+                user_username = user_username[1:]
             usernames.append(user_username)
         return username in usernames
         
@@ -297,6 +327,9 @@ class UserManagementPage(BasePage):
         rows = self.page.locator(self.user_row)
         for i in range(rows.count()):
             user_username = rows.nth(i).locator(self.user_username).text_content()
+            # 移除@符号
+            if user_username and user_username.startswith('@'):
+                user_username = user_username[1:]
             if user_username == username:
                 return i
         return -1
