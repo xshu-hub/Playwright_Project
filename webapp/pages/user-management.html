@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 测试系统</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin: 0;
+        }
+        
+        .page-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .filter-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .filter-control {
+            height: 40px;
+            padding: 0 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .users-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .users-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .users-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+        
+        .users-count {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .users-table th,
+        .users-table td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .users-table td {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .users-table tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        
+        .user-username {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+        
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .role-badge.admin {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .role-badge.user {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .empty-description {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+        
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+        
+        .close:hover {
+            color: #333;
+        }
+        
+        .modal-body {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-control {
+            width: 100%;
+            height: 45px;
+            padding: 0 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .required {
+            color: #dc3545;
+        }
+        
+        .form-help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 6px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            color: #155724;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 6px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .users-table {
+                font-size: 12px;
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 10px;
+            }
+            
+            .user-actions {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="dashboard.html">仪表板</a>
+                <span>></span>
+                <span>用户管理</span>
+            </div>
+            <h1 class="page-title">用户管理</h1>
+            <div class="page-actions">
+                <button id="addUserBtn" class="btn btn-primary">👤 添加用户</button>
+                <button id="refreshBtn" class="btn btn-secondary">🔄 刷新</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 筛选器 -->
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">用户角色</label>
+                    <select id="roleFilter" class="filter-control">
+                        <option value="">全部角色</option>
+                        <option value="admin">管理员</option>
+                        <option value="user">普通用户</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">用户状态</label>
+                    <select id="statusFilter" class="filter-control">
+                        <option value="">全部状态</option>
+                        <option value="active">活跃</option>
+                        <option value="inactive">禁用</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">搜索</label>
+                    <input type="text" id="searchFilter" class="filter-control" placeholder="搜索用户名或姓名...">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户列表 -->
+        <div class="users-container">
+            <div class="users-header">
+                <h2 class="users-title">用户列表</h2>
+                <div class="users-count" id="usersCount">共 0 个用户</div>
+            </div>
+            
+            <div id="usersTableContainer">
+                <table class="users-table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>用户信息</th>
+                            <th>邮箱</th>
+                            <th>角色</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- 用户数据将通过 JavaScript 动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加/编辑用户模态框 -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">添加用户</h3>
+                <button class="close" onclick="closeUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label class="form-label">用户名 <span class="required">*</span></label>
+                        <input type="text" id="username" class="form-control" placeholder="请输入用户名" required>
+                        <div class="form-help">用户名用于登录，只能包含字母、数字和下划线</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">姓名 <span class="required">*</span></label>
+                        <input type="text" id="name" class="form-control" placeholder="请输入真实姓名" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">邮箱 <span class="required">*</span></label>
+                        <input type="email" id="email" class="form-control" placeholder="请输入邮箱地址" required>
+                    </div>
+                    
+                    <div class="form-group" id="passwordGroup">
+                        <label class="form-label">密码 <span class="required">*</span></label>
+                        <input type="password" id="password" class="form-control" placeholder="请输入密码" required>
+                        <div class="form-help">密码长度至少6位</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">角色 <span class="required">*</span></label>
+                        <select id="role" class="form-control" required>
+                            <option value="">请选择角色</option>
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select id="status" class="form-control">
+                            <option value="active">活跃</option>
+                            <option value="inactive">禁用</option>
+                        </select>
+                    </div>
+                    
+                    <div id="userFormMessage"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeUserModal()">取消</button>
+                <button type="submit" form="userForm" class="btn btn-primary" id="saveUserBtn">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态和管理员权限
+            if (!Utils.auth.requireAuth()) {
+                return;
+            }
+            
+            const currentUser = Utils.auth.getCurrentUser();
+            if (currentUser.role !== 'admin') {
+                Utils.ui.showMessage('您没有权限访问此页面', 'error');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+                return;
+            }
+            
+            const usersTableBody = document.getElementById('usersTableBody');
+            const usersCount = document.getElementById('usersCount');
+            const roleFilter = document.getElementById('roleFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const searchFilter = document.getElementById('searchFilter');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const addUserBtn = document.getElementById('addUserBtn');
+            const userModal = document.getElementById('userModal');
+            const userForm = document.getElementById('userForm');
+            const modalTitle = document.getElementById('modalTitle');
+            const saveUserBtn = document.getElementById('saveUserBtn');
+            const userFormMessage = document.getElementById('userFormMessage');
+            
+            let allUsers = [];
+            let filteredUsers = [];
+            let editingUserId = null;
+            
+            // 加载用户列表
+            function loadUsers() {
+                allUsers = Utils.data.getUsers();
+                applyFilters();
+            }
+            
+            // 应用筛选器
+            function applyFilters() {
+                filteredUsers = allUsers.filter(user => {
+                    // 角色筛选
+                    if (roleFilter.value && user.role !== roleFilter.value) {
+                        return false;
+                    }
+                    
+                    // 状态筛选
+                    const userStatus = user.status || 'active';
+                    if (statusFilter.value && userStatus !== statusFilter.value) {
+                        return false;
+                    }
+                    
+                    // 搜索筛选
+                    if (searchFilter.value) {
+                        const searchTerm = searchFilter.value.toLowerCase();
+                        return user.username.toLowerCase().includes(searchTerm) ||
+                               user.name.toLowerCase().includes(searchTerm) ||
+                               user.email.toLowerCase().includes(searchTerm);
+                    }
+                    
+                    return true;
+                });
+                
+                renderUsers();
+            }
+            
+            // 渲染用户列表
+            function renderUsers() {
+                usersCount.textContent = `共 ${filteredUsers.length} 个用户`;
+                
+                if (filteredUsers.length === 0) {
+                    document.getElementById('usersTableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">👥</div>
+                            <div class="empty-title">暂无用户数据</div>
+                            <div class="empty-description">没有找到符合条件的用户</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 确保表格结构存在
+                if (!document.getElementById('usersTable')) {
+                    document.getElementById('usersTableContainer').innerHTML = `
+                        <table class="users-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>用户信息</th>
+                                    <th>邮箱</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = filteredUsers.map(user => {
+                    const userStatus = user.status || 'active';
+                    const createdDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '未知';
+                    const avatarText = user.name.charAt(0).toUpperCase();
+                    
+                    return `
+                        <tr>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">${avatarText}</div>
+                                    <div class="user-details">
+                                        <div class="user-name">${user.name}</div>
+                                        <div class="user-username">@${user.username}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="role-badge ${user.role}">
+                                    ${user.role === 'admin' ? '管理员' : '普通用户'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge ${userStatus}">
+                                    ${userStatus === 'active' ? '活跃' : '禁用'}
+                                </span>
+                            </td>
+                            <td>${createdDate}</td>
+                            <td>
+                                <div class="user-actions">
+                                    <button class="btn-sm btn-primary" onclick="editUser('${user.id}')">编辑</button>
+                                    ${user.username !== 'admin' ? `
+                                        <button class="btn-sm ${userStatus === 'active' ? 'btn-warning' : 'btn-success'}" 
+                                                onclick="toggleUserStatus('${user.id}')">
+                                            ${userStatus === 'active' ? '禁用' : '启用'}
+                                        </button>
+                                        <button class="btn-sm btn-danger" onclick="deleteUser('${user.id}')">删除</button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            
+            // 打开添加用户模态框
+            function openAddUserModal() {
+                editingUserId = null;
+                modalTitle.textContent = '添加用户';
+                saveUserBtn.textContent = '添加用户';
+                userForm.reset();
+                document.getElementById('status').value = 'active';
+                document.getElementById('passwordGroup').style.display = 'block';
+                document.getElementById('password').required = true;
+                userFormMessage.innerHTML = '';
+                userModal.style.display = 'block';
+            }
+            
+            // 编辑用户
+            window.editUser = function(userId) {
+                const user = allUsers.find(u => u.id === userId);
+                if (!user) {
+                    Utils.ui.showMessage('用户不存在', 'error');
+                    return;
+                }
+                
+                editingUserId = userId;
+                modalTitle.textContent = '编辑用户';
+                saveUserBtn.textContent = '保存修改';
+                
+                // 填充表单
+                document.getElementById('username').value = user.username;
+                document.getElementById('name').value = user.name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('role').value = user.role;
+                document.getElementById('status').value = user.status || 'active';
+                
+                // 编辑时隐藏密码字段
+                document.getElementById('passwordGroup').style.display = 'none';
+                document.getElementById('password').required = false;
+                
+                userFormMessage.innerHTML = '';
+                userModal.style.display = 'block';
+            };
+            
+            // 切换用户状态
+            window.toggleUserStatus = function(userId) {
+                const user = allUsers.find(u => u.id === userId);
+                if (!user) {
+                    Utils.ui.showMessage('用户不存在', 'error');
+                    return;
+                }
+                
+                const currentStatus = user.status || 'active';
+                const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                const actionText = newStatus === 'active' ? '启用' : '禁用';
+                
+                if (confirm(`确定要${actionText}用户 "${user.name}" 吗？`)) {
+                    try {
+                        Utils.data.updateUser(userId, { status: newStatus });
+                        Utils.ui.showMessage(`用户已${actionText}`, 'success');
+                        loadUsers();
+                    } catch (error) {
+                        Utils.ui.showMessage('操作失败：' + error.message, 'error');
+                    }
+                }
+            };
+            
+            // 删除用户
+            window.deleteUser = function(userId) {
+                const user = allUsers.find(u => u.id === userId);
+                if (!user) {
+                    Utils.ui.showMessage('用户不存在', 'error');
+                    return;
+                }
+                
+                if (confirm(`确定要删除用户 "${user.name}" 吗？此操作无法撤销。`)) {
+                    try {
+                        Utils.data.deleteUser(userId);
+                        Utils.ui.showMessage('用户已删除', 'success');
+                        loadUsers();
+                    } catch (error) {
+                        Utils.ui.showMessage('删除失败：' + error.message, 'error');
+                    }
+                }
+            };
+            
+            // 关闭模态框
+            window.closeUserModal = function() {
+                userModal.style.display = 'none';
+                userForm.reset();
+                editingUserId = null;
+            };
+            
+            // 表单提交
+            userForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                userFormMessage.innerHTML = '';
+                
+                try {
+                    const formData = {
+                        username: document.getElementById('username').value.trim(),
+                        name: document.getElementById('name').value.trim(),
+                        email: document.getElementById('email').value.trim(),
+                        role: document.getElementById('role').value,
+                        status: document.getElementById('status').value
+                    };
+                    
+                    // 验证必填字段
+                    Utils.validation.required(formData.username, '用户名');
+                    Utils.validation.required(formData.name, '姓名');
+                    Utils.validation.required(formData.email, '邮箱');
+                    Utils.validation.required(formData.role, '角色');
+                    
+                    // 验证邮箱格式
+                    Utils.validation.email(formData.email);
+                    
+                    // 验证用户名格式
+                    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+                        throw new Error('用户名只能包含字母、数字和下划线');
+                    }
+                    
+                    if (editingUserId) {
+                        // 编辑用户
+                        // 检查用户名和邮箱是否重复（排除当前用户）
+                        const existingUser = allUsers.find(u => 
+                            u.id !== editingUserId && 
+                            (u.username === formData.username || u.email === formData.email)
+                        );
+                        if (existingUser) {
+                            throw new Error('用户名或邮箱已存在');
+                        }
+                        
+                        Utils.data.updateUser(editingUserId, formData);
+                        Utils.ui.showMessage('用户信息已更新', 'success');
+                    } else {
+                        // 添加用户
+                        const password = document.getElementById('password').value;
+                        if (!password || password.length < 6) {
+                            throw new Error('密码长度至少6位');
+                        }
+                        
+                        // 检查用户名和邮箱是否重复
+                        const existingUser = allUsers.find(u => 
+                            u.username === formData.username || u.email === formData.email
+                        );
+                        if (existingUser) {
+                            throw new Error('用户名或邮箱已存在');
+                        }
+                        
+                        formData.password = password;
+                        Utils.data.addUser(formData);
+                        Utils.ui.showMessage('用户添加成功', 'success');
+                    }
+                    
+                    closeUserModal();
+                    loadUsers();
+                    
+                } catch (error) {
+                    userFormMessage.innerHTML = `
+                        <div class="error-message">
+                            ❌ ${error.message}
+                        </div>
+                    `;
+                }
+            });
+            
+            // 绑定事件
+            addUserBtn.addEventListener('click', openAddUserModal);
+            refreshBtn.addEventListener('click', function() {
+                loadUsers();
+                Utils.ui.showMessage('用户列表已刷新', 'success');
+            });
+            
+            roleFilter.addEventListener('change', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+            searchFilter.addEventListener('input', applyFilters);
+            
+            // 点击模态框外部关闭
+            userModal.addEventListener('click', function(e) {
+                if (e.target === userModal) {
+                    closeUserModal();
+                }
+            });
+            
+            // 初始加载
+            loadUsers();
+        });
+    </script>
+</body>
+</html>
