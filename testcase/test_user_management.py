@@ -4,6 +4,7 @@ from playwright.sync_api import Page, expect
 from pages.login_page import LoginPage
 from pages.dashboard_page import DashboardPage
 from pages.user_management_page import UserManagementPage
+from loguru import logger
 
 
 class TestUserManagement:
@@ -65,7 +66,7 @@ class TestUserManagement:
             try:
                 if page.locator(selector).is_visible():
                     error_text = page.locator(selector).text_content()
-                    print(f"找到错误消息: {error_text}")
+                    logger.info(f"找到错误消息: {error_text}")
                     error_found = True
                     break
             except:
@@ -74,7 +75,7 @@ class TestUserManagement:
         if not error_found:
             # 如果没找到错误消息，截图并打印页面内容
             page.screenshot(path="debug_error_message.png")
-            print("页面HTML:", page.content()[-1000:])  # 打印最后1000个字符
+            logger.debug("页面HTML:", page.content()[-1000:])  # 打印最后1000个字符
             
         assert error_found, "应该显示重复用户名的错误消息"
         

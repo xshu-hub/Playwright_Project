@@ -4,6 +4,7 @@ from pages.login_page import LoginPage
 from pages.dashboard_page import DashboardPage
 from pages.approval_pages import ApprovalCreatePage, ApprovalListPage, ApprovalDetailPage
 import time
+from loguru import logger
 
 
 class TestApprovalWorkflow:
@@ -43,8 +44,8 @@ class TestApprovalWorkflow:
             try:
                 page.wait_for_selector("#username", timeout=15000)
             except Exception as e:
-                print(f"等待用户名输入框超时，当前页面URL: {page.url}")
-                print(f"页面HTML内容: {page.content()[:500]}...")  # 打印前500字符
+                logger.error(f"等待用户名输入框超时，当前页面URL: {page.url}")
+                logger.debug(f"页面HTML内容: {page.content()[:500]}...")  # 打印前500字符
                 raise e
             
             # 填写登录表单
@@ -56,18 +57,18 @@ class TestApprovalWorkflow:
             try:
                 page.wait_for_url("**/dashboard.html", timeout=15000)
             except Exception as e:
-                print(f"管理员登录后页面跳转超时，当前URL: {page.url}")
+                logger.error(f"管理员登录后页面跳转超时，当前URL: {page.url}")
                 # 检查是否有错误消息
                 if page.is_visible(".error-message"):
                     error_msg = page.text_content(".error-message")
-                    print(f"登录错误消息: {error_msg}")
+                    logger.error(f"登录错误消息: {error_msg}")
                 raise e
             
             expect(page).to_have_url("http://localhost:8080/pages/dashboard.html")
         except Exception as e:
-            print(f"管理员登录失败: {str(e)}")
-            print(f"当前页面URL: {page.url}")
-            print(f"页面标题: {page.title()}")
+            logger.error(f"管理员登录失败: {str(e)}")
+            logger.error(f"当前页面URL: {page.url}")
+            logger.error(f"页面标题: {page.title()}")
             raise e
         
     def test_approval_create_page_elements(self, page: Page):
