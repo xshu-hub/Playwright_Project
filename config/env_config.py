@@ -1,9 +1,11 @@
 """环境配置管理"""
 import os
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Union, List, Callable
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from pathlib import Path
+from loguru import logger
 
 # 加载.env文件
 load_dotenv()
@@ -52,19 +54,36 @@ ENVIRONMENT_CONFIGS: Dict[Environment, EnvironmentConfig] = {
 class ConfigManager:
     """配置管理器"""
 
-    def __init__(self):
-        self._current_env = self._get_current_environment()
-        self._config = ENVIRONMENT_CONFIGS[self._current_env]
-        self._validation_rules = self._setup_validation_rules()
+    def __init__(self) -> None:
+        self._current_env: Environment = self._get_current_environment()
+        self._config: EnvironmentConfig = ENVIRONMENT_CONFIGS[self._current_env]
+        self._validation_rules: Dict[str, Callable[[Any], bool]] = self._setup_validation_rules()
     
-    def _setup_validation_rules(self) -> Dict[str, callable]:
+    def _setup_validation_rules(self) -> Dict[str, Callable[[Any], bool]]:
         """设置配置验证规则"""
         return {
-            'timeout': lambda x: isinstance(x, int) and x > 0,
-            'parallel_workers': lambda x: isinstance(x, int) and 1 <= x <= 20,
+            'timeout': lambda x: self._validate_timeout(x),
+            'headless': lambda x: isinstance(x, bool),
+            'slow_mo': lambda x: isinstance(x, int) and 0 <= x <= 5000,
+            'parallel_workers': lambda x: self._validate_parallel_workers(x),
             'retry_times': lambda x: isinstance(x, int) and 0 <= x <= 10,
-            'slow_mo': lambda x: isinstance(x, int) and x >= 0
+            'video_record': lambda x: isinstance(x, bool),
+            'screenshot_on_failure': lambda x: isinstance(x, bool)
         }
+    
+    def _validate_timeout(self, value: Any) -> bool:
+        """验证超时时间"""
+        if not isinstance(value, int):
+            return False
+        return 1000 <= value <= 300000  # 1秒到5分钟
+    
+    def _validate_parallel_workers(self, value: Any) -> bool:
+        """验证并行工作进程数"""
+        if isinstance(value, str) and value.lower() == 'auto':
+            return True
+        if not isinstance(value, int):
+            return False
+        return 1 <= value <= 16  # 1到16个进程
     
     def _validate_config_value(self, key: str, value: Any) -> bool:
         """验证配置值"""
@@ -79,11 +98,11 @@ class ConfigManager:
             env = Environment(env_name)
             # 验证环境配置是否存在
             if env not in ENVIRONMENT_CONFIGS:
-                print(f"警告: 环境 {env_name} 配置不存在，使用默认测试环境")
+                logger.warning(f"警告: 环境 {env_name} 配置不存在，使用默认测试环境")
                 return Environment.TEST
             return env
         except ValueError:
-            print(f"警告: 未知环境变量值 {env_name}，使用默认测试环境")
+            logger.warning(f"警告: 未知环境变量值 {env_name}，使用默认测试环境")
             return Environment.TEST
     
     def set_environment(self, env: Environment) -> None:
@@ -97,7 +116,7 @@ class ConfigManager:
         old_env = self._current_env
         self._current_env = env
         self._config = ENVIRONMENT_CONFIGS[env]
-        print(f"环境已从 {old_env.value} 切换到: {env.value}")
+        logger.info(f"环境已从 {old_env.value} 切换到: {env.value}")
     
     @property
     def current_env(self) -> Environment:
@@ -122,29 +141,59 @@ class ConfigManager:
     def update_config(self, **kwargs) -> None:
         """更新当前环境配置"""
         updated_fields = []
+        errors = []
         
         for key, value in kwargs.items():
             if hasattr(self._config, key):
+                # 尝试类型转换
+                converted_value = self._convert_config_value(key, value)
+                if converted_value is None:
+                    errors.append(f"配置类型转换失败: {key} = {value}")
+                    continue
+                
                 # 验证新值
-                if not self._validate_config_value(key, value):
-                    print(f"配置更新失败，验证不通过: {key} = {value}")
+                if not self._validate_config_value(key, converted_value):
+                    errors.append(f"配置验证失败: {key} = {converted_value}")
                     continue
                 
                 old_value = getattr(self._config, key)
-                setattr(self._config, key, value)
-                updated_fields.append(f"{key}: {old_value} -> {value}")
+                setattr(self._config, key, converted_value)
+                updated_fields.append(f"{key}: {old_value} -> {converted_value}")
             else:
-                print(f"警告: 未知配置项: {key}")
+                errors.append(f"未知配置项: {key}")
         
+        if errors:
+            logger.error(f"配置更新错误: {'; '.join(errors)}")
         if updated_fields:
-            print(f"配置已更新: {', '.join(updated_fields)}")
+            logger.info(f"配置已更新: {', '.join(updated_fields)}")
+    
+    def _convert_config_value(self, key: str, value: Any) -> Optional[Any]:
+        """转换配置值类型"""
+        try:
+            if key == 'timeout' and isinstance(value, str):
+                return int(value)
+            elif key == 'headless' and isinstance(value, str):
+                return value.lower() in ('true', '1', 'yes', 'on')
+            elif key == 'slow_mo' and isinstance(value, str):
+                return int(value)
+            elif key == 'parallel_workers' and isinstance(value, str):
+                if value.lower() == 'auto':
+                    return 'auto'
+                return int(value)
+            elif key == 'retry_times' and isinstance(value, str):
+                return int(value)
+            elif key in ('video_record', 'screenshot_on_failure') and isinstance(value, str):
+                return value.lower() in ('true', '1', 'yes', 'on')
+            return value
+        except (ValueError, TypeError):
+            return None
     
     def validate_current_config(self) -> bool:
         """验证当前配置有效性"""
         config_dict = self._config.dict()
         for key, value in config_dict.items():
             if not self._validate_config_value(key, value):
-                print(f"配置验证失败: {key} = {value}")
+                logger.warning(f"配置验证失败: {key} = {value}")
                 return False
         return True
     
@@ -166,7 +215,7 @@ class ConfigManager:
         """失败时是否截图"""
         return self._config.screenshot_on_failure
     
-    def get_parallel_workers(self):
+    def get_parallel_workers(self) -> Union[int, str]:
         """获取并行工作进程数"""
         # 优先使用环境变量PARALLEL_WORKERS
         env_workers = os.getenv('PARALLEL_WORKERS')
@@ -180,7 +229,7 @@ class ConfigManager:
                     return 'auto'
                 return workers
             except ValueError:
-                print(f"警告: PARALLEL_WORKERS环境变量值无效 '{env_workers}'，使用默认配置")
+                logger.warning(f"警告: PARALLEL_WORKERS环境变量值无效 '{env_workers}'，使用默认配置")
         
         # 使用配置文件中的默认值
         return self._config.parallel_workers
@@ -189,7 +238,7 @@ class ConfigManager:
         """获取重试次数"""
         return self._config.retry_times
     
-    def get_all_environments(self) -> list:
+    def get_all_environments(self) -> List[str]:
         """获取所有可用环境"""
         return [env.value for env in Environment]
     

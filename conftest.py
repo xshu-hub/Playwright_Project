@@ -16,6 +16,7 @@ from config.playwright_config import PLAYWRIGHT_CONFIG
 from config.env_config import config_manager
 from utils.logger_config import logger_config
 from utils.screenshot_helper import ScreenshotHelper
+from loguru import logger
 
 # 初始化日志配置
 logger_config.setup_logger(
@@ -103,18 +104,39 @@ def pytest_configure(config):
         config.addinivalue_line('addopts', f'--html={html_report_path}')
         config.addinivalue_line('addopts', '--self-contained-html')
     except Exception as e:
-        print(f"Warning: Failed to add to addopts: {e}")
+        logger.warning(f"Warning: Failed to add to addopts: {e}")
     
-    print(f"测试开始时间: {datetime.now()}")
-    print(f"当前测试会话目录: {test_session_dir}")
-    print(f"浏览器: {PLAYWRIGHT_CONFIG['default_browser']}")
-    print(f"无头模式: {PLAYWRIGHT_CONFIG['browser_config']['headless']}")
-    print("-" * 50)
+    logger.info(f"测试开始时间: {datetime.now()}")
+    logger.info(f"当前测试会话目录: {test_session_dir}")
+    logger.info(f"浏览器: {PLAYWRIGHT_CONFIG['default_browser']}")
+    logger.info(f"无头模式: {PLAYWRIGHT_CONFIG['browser_config']['headless']}")
+    logger.info("-" * 50)
 
 
 def pytest_unconfigure(config):
     """Pytest 清理钩子"""
-    print(f"测试结束时间: {datetime.now()}")
+    logger.info(f"测试结束时间: {datetime.now()}")
+    
+    # 自动生成Allure HTML报告
+    if hasattr(config, '_current_session_dir') and config._current_session_dir:
+        session_dir = config._current_session_dir
+        allure_results_dir = session_dir / 'allure-results'
+        allure_report_dir = session_dir / 'allure-report'
+        
+        # 检查是否有allure-results数据
+        if allure_results_dir.exists() and any(allure_results_dir.iterdir()):
+            try:
+                import subprocess
+                # 生成Allure HTML报告
+                cmd = f'allure generate "{allure_results_dir}" -o "{allure_report_dir}" --clean'
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+                
+                if result.returncode == 0:
+                    logger.info(f"Allure报告已生成: {allure_report_dir}/index.html")
+                else:
+                    logger.warning(f"Allure报告生成失败: {result.stderr}")
+            except Exception as e:
+                logger.error(f"生成Allure报告时出错: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -186,7 +208,7 @@ def pytest_runtest_makereport(item, call):
             page = item.funcargs.get('page')
         
         if rep.failed:
-            print(f"测试失败: {item.nodeid}")
+            logger.error(f"测试失败: {item.nodeid}")
             
             # 安全地处理截图和视频，添加线程安全机制
             try:
@@ -213,39 +235,39 @@ def pytest_runtest_makereport(item, call):
                             # 使用超时控制截图
                             if hasattr(page, 'screenshot'):
                                 page.screenshot(path=screenshot_path, timeout=3000)  # 3秒超时
-                                print(f"失败截图已保存: {screenshot_path}")
+                                logger.info(f"失败截图已保存: {screenshot_path}")
                                 
                                 # 添加到Allure报告
                                 try:
                                     import allure
                                     allure.attach.file(screenshot_path, name="失败截图", attachment_type=allure.attachment_type.PNG)
                                 except Exception as e:
-                                    print(f"Allure截图附件添加失败: {e}")
+                                    logger.warning(f"Allure截图附件添加失败: {e}")
                                     
                             elapsed = time.time() - start_time
-                            print(f"截图处理耗时: {elapsed:.2f}秒")
+                            logger.info(f"截图处理耗时: {elapsed:.2f}秒")
                         
                     except Exception as e:
-                        print(f"截图处理失败: {e}")
+                        logger.error(f"截图处理失败: {e}")
                     
                     # 视频处理 - 失败时保留视频并添加到Allure报告
                     try:
                         if hasattr(page, 'video') and page.video:
-                            print("测试失败，视频将被保留")
+                            logger.info("测试失败，视频将被保留")
                             # 标记视频需要添加到Allure报告
                             if not hasattr(item, '_video_for_allure'):
                                 item._video_for_allure = True
-                                print("视频将添加到Allure报告")
+                                logger.info("视频将添加到Allure报告")
                     except Exception as e:
-                        print(f"视频处理警告: {e}")
+                        logger.warning(f"视频处理警告: {e}")
                         
             except Exception as e:
-                print(f"失败处理钩子异常: {e}")
+                logger.error(f"失败处理钩子异常: {e}")
                 # 确保异常不会阻塞测试流程
                 pass
         
         else:
-            print(f"测试通过: {item.nodeid}")
+            logger.info(f"测试通过: {item.nodeid}")
             
             # 测试通过时删除视频文件以节省空间
             try:
@@ -254,7 +276,7 @@ def pytest_runtest_makereport(item, call):
                     if not hasattr(item, '_video_should_be_deleted'):
                         item._video_should_be_deleted = True
             except Exception as e:
-                print(f"视频删除标记失败: {e}")
+                logger.warning(f"视频删除标记失败: {e}")
 
 
 @pytest.fixture(autouse=True)
@@ -265,7 +287,7 @@ def test_logger(request):
     
     # 记录测试开始
     logger_config.log_test_start(test_name)
-    print(f"开始执行测试: {test_name}")
+    logger.info(f"开始执行测试: {test_name}")
     
     def fin():
         # 记录测试结束
@@ -276,7 +298,7 @@ def test_logger(request):
             test_result = "SKIPPED"
             
         logger_config.log_test_end(test_name, test_result)
-        print(f"测试执行完成: {test_name}")
+        logger.info(f"测试执行完成: {test_name}")
         
         # 处理失败测试的视频 - 添加到Allure报告
         if hasattr(request.node, '_video_for_allure') and request.node._video_for_allure:
@@ -302,12 +324,12 @@ def test_logger(request):
                                     name=f"失败测试视频_{test_name}",
                                     attachment_type=allure.attachment_type.WEBM
                                 )
-                            print(f"视频已添加到Allure报告: {video_path}")
+                            logger.info(f"视频已添加到Allure报告: {video_path}")
                     except Exception as e:
-                        print(f"添加视频到Allure报告失败: {e}")
+                        logger.error(f"添加视频到Allure报告失败: {e}")
                         
             except Exception as e:
-                print(f"视频Allure处理过程出错: {e}")
+                logger.error(f"视频Allure处理过程出错: {e}")
         
         # 清理通过测试的视频文件
         elif hasattr(request.node, '_video_should_be_deleted') and request.node._video_should_be_deleted:
@@ -329,11 +351,11 @@ def test_logger(request):
                         video_path = page.video.path()
                         if video_path and os.path.exists(video_path):
                             os.remove(video_path)
-                            print(f"已删除通过测试的视频文件: {video_path}")
+                            logger.info(f"已删除通过测试的视频文件: {video_path}")
                     except Exception as e:
-                        print(f"删除视频文件失败: {e}")
+                        logger.warning(f"删除视频文件失败: {e}")
                         
             except Exception as e:
-                print(f"视频清理过程出错: {e}")
+                logger.warning(f"视频清理过程出错: {e}")
     
     request.addfinalizer(fin)

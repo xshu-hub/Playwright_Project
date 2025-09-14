@@ -22,7 +22,7 @@ from config.env_config import config_manager
 from utils.screenshot_helper import ScreenshotHelper
 from utils.video_helper import VideoHelper
 from utils.logger_config import logger_config
-from pages.base_page import BasePage
+from page.base_page import BasePage
 
 
 class BaseTest(ABC):

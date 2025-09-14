@@ -2,15 +2,16 @@
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set, Union, List
 from playwright.sync_api import Page, BrowserContext
 from loguru import logger
+import subprocess
 
 
 class VideoHelper:
     """视频录制助手类"""
     
-    def __init__(self, context: BrowserContext, base_path: str = "reports/videos"):
+    def __init__(self, context: BrowserContext, base_path: str = "reports/videos") -> None:
         """
         初始化视频录制助手
         
@@ -18,18 +19,40 @@ class VideoHelper:
             context: Playwright 浏览器上下文
             base_path: 视频保存基础路径
         """
-        self.context = context
-        self.base_path = Path(base_path)
+        self.context: BrowserContext = context
+        self.base_path: Path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         
         # 视频录制配置
-        self.default_config = {
+        self.default_config: Dict[str, Any] = {
             'size': {'width': 1920, 'height': 1080},
             'mode': 'retain-on-failure'  # 'on', 'off', 'retain-on-failure'
         }
         
-        self.is_recording = False
-        self.current_video_path = None
+        self.is_recording: bool = False
+        self.current_video_path: Optional[Path] = None
+        self._active_videos: Set[Path] = set()  # 跟踪活跃的视频文件
+        
+        # 检查ffmpeg可用性
+        self._ffmpeg_available: bool = self._check_ffmpeg_availability()
+    
+    def _check_ffmpeg_availability(self) -> bool:
+        """检查ffmpeg是否可用"""
+        try:
+            import subprocess
+            result = subprocess.run(['ffmpeg', '-version'], 
+                                  capture_output=True, 
+                                  text=True, 
+                                  timeout=5)
+            available = result.returncode == 0
+            if available:
+                logger.info("FFmpeg 可用，支持视频压缩功能")
+            else:
+                logger.warning("FFmpeg 不可用，视频压缩功能将被禁用")
+            return available
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+            logger.warning(f"FFmpeg 检查失败: {str(e)}，视频压缩功能将被禁用")
+            return False
     
     def start_recording(
         self,
@@ -65,6 +88,7 @@ class VideoHelper:
             # 注意: Playwright 的视频录制需要在创建上下文时配置
             # 这里主要是记录状态和路径信息，实际录制由 Playwright 上下文管理
             self.is_recording = True
+            self._active_videos.add(self.current_video_path)
             
             logger.info(f"🎥 视频录制已启用: {self.current_video_path}")
             return True
@@ -104,6 +128,8 @@ class VideoHelper:
             logger.error(f"停止录制视频失败: {str(e)}")
             return None
         finally:
+            if self.current_video_path:
+                self._active_videos.discard(self.current_video_path)
             self.current_video_path = None
     
     def get_video_path(self, page: Page) -> Optional[str]:
@@ -187,6 +213,10 @@ class VideoHelper:
             deleted_count = 0
             
             for file_path in self.base_path.glob("*.webm"):
+                # 跳过正在录制的视频文件
+                if file_path in self._active_videos:
+                    continue
+                    
                 file_time = datetime.fromtimestamp(file_path.stat().st_mtime)
                 if (current_time - file_time).days > days:
                     file_path.unlink()
@@ -202,7 +232,7 @@ class VideoHelper:
             logger.error(f"清理视频文件失败: {str(e)}")
             return 0
     
-    def get_video_info(self, file_path: str) -> dict:
+    def get_video_info(self, file_path: str) -> Dict[str, Any]:
         """
         获取视频文件信息
         
@@ -244,6 +274,11 @@ class VideoHelper:
             压缩后的视频路径
         """
         try:
+            # 检查ffmpeg是否可用
+            if not self._ffmpeg_available:
+                logger.warning("FFmpeg 不可用，无法进行视频压缩")
+                return None
+            
             import subprocess
             
             input_file = Path(input_path)
@@ -275,7 +310,7 @@ class VideoHelper:
             ]
             
             # 执行压缩
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode == 0:
                 logger.info(f"视频压缩完成: {output_path}")
@@ -284,8 +319,8 @@ class VideoHelper:
                 logger.error(f"视频压缩失败: {result.stderr}")
                 return None
                 
-        except ImportError:
-            logger.warning("视频压缩需要安装 ffmpeg")
+        except subprocess.TimeoutExpired:
+            logger.error("视频压缩超时")
             return None
         except Exception as e:
             logger.error(f"视频压缩失败: {str(e)}")
@@ -295,7 +330,7 @@ class VideoHelper:
 class VideoRecordingContext:
     """视频录制上下文管理器"""
     
-    def __init__(self, video_helper: VideoHelper, test_name: str = "", save_on_success: bool = False):
+    def __init__(self, video_helper: VideoHelper, test_name: str = "", save_on_success: bool = False) -> None:
         """
         初始化视频录制上下文
         
@@ -304,18 +339,18 @@ class VideoRecordingContext:
             test_name: 测试名称
             save_on_success: 成功时是否保存视频
         """
-        self.video_helper = video_helper
-        self.test_name = test_name
-        self.save_on_success = save_on_success
-        self.video_path = None
-        self.test_failed = False
+        self.video_helper: VideoHelper = video_helper
+        self.test_name: str = test_name
+        self.save_on_success: bool = save_on_success
+        self.video_path: Optional[str] = None
+        self.test_failed: bool = False
     
-    def __enter__(self):
+    def __enter__(self) -> 'VideoRecordingContext':
         """进入上下文"""
         self.video_helper.start_recording(self.test_name)
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> bool:
         """退出上下文"""
         # 判断是否有异常（测试失败）
         self.test_failed = exc_type is not None
@@ -339,3 +374,52 @@ def create_video_helper(context: BrowserContext, base_path: str = "reports/video
         视频助手实例
     """
     return VideoHelper(context, base_path)
+    
+    def cleanup_resources(self) -> None:
+        """
+        清理资源和临时文件
+        """
+        try:
+            # 停止当前录制
+            if self.is_recording:
+                self.stop_recording(save_video=False)
+            
+            # 清理活跃视频集合
+            self._active_videos.clear()
+            
+            logger.info("视频助手资源清理完成")
+            
+        except Exception as e:
+            logger.error(f"清理资源失败: {str(e)}")
+    
+    def get_active_videos(self) -> Set[Path]:
+        """
+        获取当前活跃的视频文件列表
+        
+        Returns:
+            活跃视频文件路径集合
+        """
+        return self._active_videos.copy()
+    
+    def force_cleanup_video(self, video_path: str) -> bool:
+        """
+        强制清理指定视频文件
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            是否成功清理
+        """
+        try:
+            path = Path(video_path)
+            if path.exists():
+                path.unlink()
+                self._active_videos.discard(path)
+                logger.info(f"强制删除视频文件: {video_path}")
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"强制清理视频文件失败: {str(e)}")
+            return False

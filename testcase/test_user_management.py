@@ -1,9 +1,9 @@
 import pytest
 import time
 from playwright.sync_api import Page, expect
-from pages.login_page import LoginPage
-from pages.dashboard_page import DashboardPage
-from pages.user_management_page import UserManagementPage
+from page.login_page import LoginPage
+from page.dashboard_page import DashboardPage
+from page.user_management_page import UserManagementPage
 from loguru import logger
 
 

@@ -1,8 +1,8 @@
 import pytest
 from playwright.sync_api import Page, expect
-from pages.login_page import LoginPage
-from pages.dashboard_page import DashboardPage
-from pages.approval_pages import ApprovalCreatePage, ApprovalListPage, ApprovalDetailPage
+from page.login_page import LoginPage
+from page.dashboard_page import DashboardPage
+from page.approval_pages import ApprovalCreatePage, ApprovalListPage, ApprovalDetailPage
 import time
 from loguru import logger
 

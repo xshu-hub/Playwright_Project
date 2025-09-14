@@ -1,12 +1,12 @@
 """日志配置工具"""
+import hashlib
 import os
 import sys
-from pathlib import Path
-from datetime import datetime
-from loguru import logger
-from typing import Optional
 import time
-import hashlib
+from pathlib import Path
+from typing import Optional
+
+from loguru import logger
 
 
 class LoggerConfig:
@@ -29,6 +29,7 @@ class LoggerConfig:
         self._log_cache = {}
         self._cache_size_limit = 1000
         self._dedup_window = 5  # 5秒内的重复日志将被去重
+        self._cleanup_counter = 0  # 清理计数器
     
     def _should_log(self, message: str, level: str) -> bool:
         """检查是否应该记录日志（去重检查）
@@ -65,14 +66,27 @@ class LoggerConfig:
         Args:
             current_time: 当前时间戳
         """
-        # 如果缓存超过限制，清理过期项
-        if len(self._log_cache) > self._cache_size_limit:
+        # 增加清理计数器
+        self._cleanup_counter += 1
+        
+        # 定期清理或缓存超过限制时清理
+        if len(self._log_cache) > self._cache_size_limit or self._cleanup_counter >= 100:
             expired_keys = [
                 key for key, timestamp in self._log_cache.items()
                 if current_time - timestamp > self._dedup_window * 2
             ]
             for key in expired_keys:
                 del self._log_cache[key]
+            
+            # 如果清理后仍然超过限制，强制清理一半缓存
+            if len(self._log_cache) > self._cache_size_limit:
+                cache_items = list(self._log_cache.items())
+                # 保留较新的一半
+                cache_items.sort(key=lambda x: x[1], reverse=True)
+                self._log_cache = dict(cache_items[:self._cache_size_limit//2])
+            
+            # 重置计数器
+            self._cleanup_counter = 0
     
     def log_with_dedup(self, level: str, message: str) -> None:
         """带去重功能的日志记录
@@ -86,6 +100,7 @@ class LoggerConfig:
     
     def setup_logger(
         self,
+        name: str = "playwright_test",
         level: str = "INFO",
         console_output: bool = True,
         file_output: bool = True,
@@ -96,6 +111,7 @@ class LoggerConfig:
         """设置日志配置
         
         Args:
+            name: 日志器名称
             level: 日志级别
             console_output: 是否输出到控制台
             file_output: 是否输出到文件
@@ -111,48 +127,80 @@ class LoggerConfig:
         if log_level not in self.level_mapping:
             log_level = "INFO"
         
-        # 简化的控制台输出格式
-        console_format = "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
-        
-        # 简化的文件输出格式
-        file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+        # 统一的日志格式配置
+        formats = self._get_log_formats()
         
         # 添加控制台处理器
         if console_output:
             logger.add(
                 sys.stdout,
-                format=console_format,
+                format=formats['console'],
                 level=log_level,
-                colorize=True  # 启用颜色提升开发体验
+                colorize=True,
+                backtrace=True,
+                diagnose=True,
+                filter=self._console_filter
             )
         
         # 添加文件处理器
         if file_output:
             try:
                 # 通用日志文件
+                log_file = self.log_dir / f"{name}.log"
                 logger.add(
-                    str(self.log_dir / "test.log"),
-                    format=file_format,
+                    str(log_file),
+                    format=formats['file'],
                     level=log_level,
                     rotation=rotation,
                     retention=retention,
+                    compression=compression,
                     encoding="utf-8",
-                    enqueue=True  # 避免多进程问题
+                    enqueue=True,
+                    backtrace=True,
+                    diagnose=True
                 )
                 
                 # 错误日志文件
+                error_log_file = self.log_dir / f"{name}_error.log"
                 logger.add(
-                    str(self.log_dir / "error.log"),
-                    format=file_format,
+                    str(error_log_file),
+                    format=formats['file'],
                     level="ERROR",
                     rotation=rotation,
                     retention=retention,
+                    compression=compression,
                     encoding="utf-8",
-                    enqueue=True
+                    enqueue=True,
+                    backtrace=True,
+                    diagnose=True
                 )
             except Exception as e:
                 # 如果文件日志失败，只使用控制台日志
-                print(f"Warning: Could not setup file logging: {e}")
+                # 这里不能使用logger，因为logger还没有完全设置好
+                sys.stderr.write(f"Warning: Could not setup file logging: {e}\n")
+    
+    def _get_log_formats(self) -> dict:
+        """获取统一的日志格式"""
+        return {
+            'console': (
+                "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+                "<level>{level: <8}</level> | "
+                "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+                "<level>{message}</level>"
+            ),
+            'file': (
+                "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | "
+                "{process.id}:{thread.id} | {name}:{function}:{line} | {message}"
+            )
+        }
+    
+    def _console_filter(self, record):
+        """控制台日志过滤器"""
+        # 过滤掉一些不重要的日志
+        message = record['message']
+        if any(keyword in message.lower() for keyword in ['debug', 'trace']):
+            return record['level'].name != 'DEBUG'
+        return True
     
     def get_test_logger(self, test_name: str) -> logger:
         """获取测试专用日志器
