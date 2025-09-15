@@ -1,5 +1,4 @@
 """视频录制助手工具"""
-import os
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -29,7 +28,7 @@ class VideoHelper:
         }
         
         self.is_recording = False
-        self.current_video_path = None
+        self.current_video_path: Optional[Path] = None
     
     def start_recording(
         self,
@@ -106,7 +105,8 @@ class VideoHelper:
         finally:
             self.current_video_path = None
     
-    def get_video_path(self, page: Page) -> Optional[str]:
+    @staticmethod
+    def get_video_path(page: Page) -> Optional[str]:
         """
         获取页面的视频录制路径
         
@@ -141,7 +141,7 @@ class VideoHelper:
             保存的视频文件路径
         """
         try:
-            video_path = self.get_video_path(page)
+            video_path = VideoHelper.get_video_path(page)
             if not video_path:
                 logger.warning("未找到视频录制文件")
                 return None
@@ -202,7 +202,8 @@ class VideoHelper:
             logger.error(f"清理视频文件失败: {str(e)}")
             return 0
     
-    def get_video_info(self, file_path: str) -> dict:
+    @staticmethod
+    def get_video_info(file_path: str) -> dict:
         """
         获取视频文件信息
         
@@ -231,7 +232,8 @@ class VideoHelper:
             logger.error(f"获取视频信息失败: {str(e)}")
             return {}
     
-    def compress_video(self, input_path: str, output_path: str = None, quality: str = "medium") -> Optional[str]:
+    @staticmethod
+    def compress_video(input_path: str, output_path: Optional[str] = None, quality: str = "medium") -> Optional[str]:
         """
         压缩视频文件 (需要 ffmpeg)
         

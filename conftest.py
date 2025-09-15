@@ -118,6 +118,7 @@ def pytest_configure(config):
 
 def pytest_unconfigure(config):
     """Pytest 清理钩子"""
+    _ = config  # 标记参数已知但未使用
     logger.info(f"测试结束时间: {datetime.now()}")
 
 
@@ -184,6 +185,7 @@ def screenshot_helper(page: Page):
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """测试报告钩子 - 安全的失败截图和视频处理"""
+    _ = call  # 标记参数已知但未使用
     outcome = yield
     rep = outcome.get_result()
     
@@ -299,8 +301,8 @@ def test_logger(request):
             
         # 使用子目录logger记录测试结束
         if subdir_name:
-            subdir_logger = logger_config.get_subdir_logger(subdir_name)
-            subdir_logger.info(f"测试执行完成: {test_name} - {test_result}")
+            end_subdir_logger = logger_config.get_subdir_logger(subdir_name)
+            end_subdir_logger.info(f"测试执行完成: {test_name} - {test_result}")
         
         logger_config.log_test_end(test_name, test_result)
         logger.info(f"测试执行完成: {test_name}")

@@ -65,9 +65,9 @@ class ConfigManager:
     """配置管理器"""
 
     def __init__(self):
-        self._current_env = self._get_current_environment()
+        self._current_env = ConfigManager._get_current_environment()
         self._config = ENVIRONMENT_CONFIGS[self._current_env]
-        self._validation_rules = self._setup_validation_rules()
+        self._validation_rules = ConfigManager._setup_validation_rules()
         # 从环境变量覆盖配置
         self._load_env_overrides()
     
@@ -105,7 +105,8 @@ class ConfigManager:
                 except (ValueError, TypeError) as e:
                     logger.error(f"环境变量{env_key}转换失败: {env_value}, 错误: {e}")
     
-    def _setup_validation_rules(self) -> Dict[str, callable]:
+    @staticmethod
+    def _setup_validation_rules() -> Dict[str, callable]:
         """设置配置验证规则"""
         return {
             'browser_timeout': lambda x: isinstance(x, int) and x > 0,
@@ -122,7 +123,8 @@ class ConfigManager:
             return self._validation_rules[key](value)
         return True
     
-    def _get_current_environment(self) -> Environment:
+    @staticmethod
+    def _get_current_environment() -> Environment:
         """获取当前环境"""
         env_name = os.getenv('TEST_ENV', Environment.TEST.value).lower()
         try:
@@ -191,7 +193,7 @@ class ConfigManager:
     
     def validate_current_config(self) -> bool:
         """验证当前配置有效性"""
-        config_dict = self._config.dict()
+        config_dict = self._config.model_dump()
         for key, value in config_dict.items():
             if not self._validate_config_value(key, value):
                 logger.error(f"配置验证失败: {key} = {value}")
@@ -247,7 +249,8 @@ class ConfigManager:
         """获取重试次数"""
         return self._config.retry_times
     
-    def get_all_environments(self) -> list:
+    @staticmethod
+    def get_all_environments() -> list:
         """获取所有可用环境"""
         return [env.value for env in Environment]
     
@@ -255,7 +258,7 @@ class ConfigManager:
         """导出当前配置"""
         return {
             'environment': self._current_env.value,
-            'config': self._config.dict()
+            'config': self._config.model_dump()
         }
 
 

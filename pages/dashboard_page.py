@@ -103,7 +103,7 @@ class DashboardPage(BasePage):
         try:
             # 等待URL变化到登录页面
             self.page.wait_for_url("**/login.html", timeout=timeout)
-        except Exception:
+        except TimeoutError:
             # 如果自动重定向失败，手动导航到登录页面
             try:
                 self.page.goto("http://localhost:8080/pages/login.html")

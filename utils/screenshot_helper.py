@@ -1,8 +1,7 @@
 """截图助手工具"""
-import os
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional, Callable
 from playwright.sync_api import Page
 from loguru import logger
 
@@ -73,18 +72,18 @@ class ScreenshotHelper:
             file_path = self.base_path / filename
             
             # 合并截图配置
-            screenshot_config = {**self.default_config, **kwargs}
+            screenshot_config = dict(self.default_config, **kwargs)
             screenshot_config['full_page'] = full_page
             screenshot_config['path'] = str(file_path)
             
             # 设置图片质量和格式
             if quality < 100:
                 screenshot_config['type'] = 'jpeg'
-                screenshot_config['quality'] = quality
+                screenshot_config['quality'] = str(quality)
             
             # 添加超时设置
             if 'timeout' not in screenshot_config:
-                screenshot_config['timeout'] = 30000  # 30秒超时
+                screenshot_config['timeout'] = str(30000)  # 30秒超时
             
             # 截图
             if element_selector:
@@ -191,8 +190,8 @@ class ScreenshotHelper:
     
     def take_comparison_screenshots(
         self,
-        before_action: callable,
-        after_action: callable,
+        before_action: Optional[Callable],
+        after_action: Optional[Callable],
         action_name: str = "action"
     ) -> tuple[Optional[str], Optional[str]]:
         """
@@ -262,7 +261,8 @@ class ScreenshotHelper:
             logger.error(f"清理截图文件失败: {str(e)}")
             return 0
     
-    def get_screenshot_info(self, file_path: str) -> dict:
+    @staticmethod
+    def get_screenshot_info(file_path: str) -> dict:
         """
         获取截图文件信息
         

@@ -2,13 +2,13 @@
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
 from loguru import logger
-from typing import Optional, Dict, Set
+from typing import Optional, Dict, Set, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from loguru import Logger
 import time
 import hashlib
-import glob
-import threading
 from contextvars import ContextVar
 
 # 全局测试上下文变量
@@ -89,6 +89,39 @@ class LoggerConfig:
                 log_subdir = self.log_dir / subdir.name
                 log_subdir.mkdir(exist_ok=True)
     
+    @staticmethod
+    def _create_subdir_filter(target_subdir: str, error_only: bool = False):
+        """创建子目录过滤器
+        
+        Args:
+            target_subdir: 目标子目录名称
+            error_only: 是否只过滤错误级别日志
+            
+        Returns:
+            过滤器函数
+        """
+        def filter_func(record):
+            # 如果需要只过滤错误级别
+            if error_only:
+                level_info = record.get('level')
+                if level_info and hasattr(level_info, 'name'):
+                    level_name = level_info.name
+                else:
+                    level_name = ''
+                if level_name not in ['ERROR', 'CRITICAL']:
+                    return False
+            
+            # loguru的record是字典，检查extra信息
+            if 'extra' in record and record['extra']:
+                extra = record['extra']
+                if extra.get('subdir') == target_subdir:
+                    return True
+                if extra.get('test_module') == f"tests.{target_subdir}":
+                    return True
+            # 回退到原有的检查逻辑
+            return LoggerConfig._is_from_test_subdir(record, target_subdir)
+        return filter_func
+    
     def _create_log_handlers_for_subdir(self, subdir_name: str, log_level: str, 
                                        rotation: str, retention: str, file_format: str) -> None:
         """为指定的测试子目录创建日志处理器
@@ -106,20 +139,6 @@ class LoggerConfig:
         # 创建子目录专用的正常日志文件
         normal_log_key = f"{subdir_name}_normal"
         if normal_log_key not in self._created_handlers:
-            # 使用闭包捕获subdir_name的值
-            def create_filter(target_subdir):
-                def subdir_filter(record):
-                    # loguru的record是字典，检查extra信息
-                    if 'extra' in record and record['extra']:
-                        extra = record['extra']
-                        if extra.get('subdir') == target_subdir:
-                            return True
-                        if extra.get('test_module') == f"tests.{target_subdir}":
-                            return True
-                    # 回退到原有的检查逻辑
-                    return self._is_from_test_subdir(record, target_subdir)
-                return subdir_filter
-            
             logger.add(
                 str(log_subdir / f"test_{subdir_name}.log"),
                 format=file_format,
@@ -128,7 +147,7 @@ class LoggerConfig:
                 retention=retention,
                 encoding="utf-8",
                 enqueue=True,
-                filter=create_filter(subdir_name),
+                filter=LoggerConfig._create_subdir_filter(subdir_name),
                 backtrace=True,  # 启用回溯信息
                 diagnose=True    # 启用诊断信息
             )
@@ -137,28 +156,6 @@ class LoggerConfig:
         # 创建子目录专用的错误日志文件
         error_log_key = f"{subdir_name}_error"
         if error_log_key not in self._created_handlers:
-            # 使用闭包捕获subdir_name的值
-            def create_error_filter(target_subdir):
-                def error_subdir_filter(record):
-                    # 首先检查是否为错误级别
-                    level_info = record.get('level')
-                    if level_info and hasattr(level_info, 'name'):
-                        level_name = level_info.name
-                    else:
-                        level_name = ''
-                    if level_name not in ['ERROR', 'CRITICAL']:
-                        return False
-                    # loguru的record是字典，检查extra信息
-                    if 'extra' in record and record['extra']:
-                        extra = record['extra']
-                        if extra.get('subdir') == target_subdir:
-                            return True
-                        if extra.get('test_module') == f"tests.{target_subdir}":
-                            return True
-                    # 回退到原有的检查逻辑
-                    return self._is_from_test_subdir(record, target_subdir)
-                return error_subdir_filter
-            
             # 获取错误日志格式
             error_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}\n{exception}"
             
@@ -170,14 +167,15 @@ class LoggerConfig:
                 retention=retention,
                 encoding="utf-8",
                 enqueue=True,
-                filter=create_error_filter(subdir_name),
+                filter=LoggerConfig._create_subdir_filter(subdir_name, error_only=True),
                 backtrace=True,   # 启用回溯信息
                 diagnose=True,    # 启用诊断信息
                 catch=True        # 捕获异常
             )
             self._created_handlers.add(error_log_key)
     
-    def _is_from_test_subdir(self, record, subdir_name: str) -> bool:
+    @staticmethod
+    def _is_from_test_subdir(record, subdir_name: str) -> bool:
         """判断日志记录是否来自指定的测试子目录
         
         Args:
@@ -302,6 +300,7 @@ class LoggerConfig:
                         level=log_level,
                         rotation=rotation,
                         retention=retention,
+                        compression=compression,
                         encoding="utf-8",
                         enqueue=True,
                         backtrace=True,  # 启用回溯信息
@@ -317,6 +316,7 @@ class LoggerConfig:
                         level="ERROR",
                         rotation=rotation,
                         retention=retention,
+                        compression=compression,
                         encoding="utf-8",
                         enqueue=True,
                         backtrace=True,   # 启用回溯信息
@@ -336,7 +336,8 @@ class LoggerConfig:
                 # 使用 sys.stderr 输出警告，避免循环依赖
                 sys.stderr.write(f"Warning: Could not setup file logging: {e}\n")
     
-    def get_test_logger(self, test_name: str, subdir_name: str = None) -> logger:
+    @staticmethod
+    def get_test_logger(test_name: str, subdir_name: Optional[str] = None) -> 'Logger':
         """获取测试专用日志器
         
         Args:
@@ -352,7 +353,7 @@ class LoggerConfig:
             test_logger = logger.bind(test_name=test_name)
         return test_logger
     
-    def get_subdir_logger(self, subdir_name: str) -> logger:
+    def get_subdir_logger(self, subdir_name: str) -> 'Logger':
         """获取指定测试子目录的专用日志器
         
         Args:
@@ -396,7 +397,8 @@ class LoggerConfig:
         """手动刷新测试目录扫描（用于检测新增的测试子目录）"""
         self._scan_test_directories()
     
-    def set_test_context(self, subdir_name: str) -> None:
+    @staticmethod
+    def set_test_context(subdir_name: str) -> None:
         """设置当前测试上下文
         
         Args:
@@ -404,11 +406,13 @@ class LoggerConfig:
         """
         current_test_subdir.set(subdir_name)
     
-    def clear_test_context(self) -> None:
+    @staticmethod
+    def clear_test_context() -> None:
         """清除当前测试上下文"""
         current_test_subdir.set(None)
     
-    def log_test_start(self, test_name: str, test_data: Optional[dict] = None) -> None:
+    @staticmethod
+    def log_test_start(test_name: str, test_data: Optional[dict] = None) -> None:
         """记录测试开始
         
         Args:
@@ -419,7 +423,8 @@ class LoggerConfig:
         if test_data:
             logger.debug(f"测试数据: {test_data}")
     
-    def log_test_end(self, test_name: str, result: str, duration: Optional[float] = None) -> None:
+    @staticmethod
+    def log_test_end(test_name: str, result: str, duration: Optional[float] = None) -> None:
         """记录测试结束
         
         Args:
@@ -436,7 +441,8 @@ class LoggerConfig:
         duration_str = f" (耗时: {duration:.2f}s)" if duration else ""
         logger.info(f"{emoji} 测试完成: {test_name} - {result}{duration_str}")
     
-    def log_step(self, step_name: str, step_data: Optional[dict] = None) -> None:
+    @staticmethod
+    def log_step(step_name: str, step_data: Optional[dict] = None) -> None:
         """记录测试步骤
         
         Args:
@@ -447,7 +453,8 @@ class LoggerConfig:
         if step_data:
             logger.debug(f"步骤数据: {step_data}")
     
-    def log_assertion(self, assertion: str, result: bool, actual=None, expected=None) -> None:
+    @staticmethod
+    def log_assertion(assertion: str, result: bool, actual=None, expected=None) -> None:
         """记录断言结果
         
         Args:
@@ -462,7 +469,8 @@ class LoggerConfig:
         if not result and actual is not None and expected is not None:
             logger.error(f"期望值: {expected}, 实际值: {actual}")
     
-    def log_screenshot(self, screenshot_path: str, description: str = "") -> None:
+    @staticmethod
+    def log_screenshot(screenshot_path: str, description: str = "") -> None:
         """记录截图信息
         
         Args:
@@ -472,7 +480,8 @@ class LoggerConfig:
         desc = f" - {description}" if description else ""
         logger.info(f"📸 截图已保存: {screenshot_path}{desc}")
     
-    def log_page_action(self, action: str, element: str = "", value: str = "") -> None:
+    @staticmethod
+    def log_page_action(action: str, element: str = "", value: str = "") -> None:
         """记录页面操作
         
         Args:
@@ -508,7 +517,7 @@ def setup_logger(
     )
 
 
-def get_logger(name: str = None):
+def get_logger(name: Optional[str] = None) -> 'Logger':
     """获取日志器实例
     
     Args:

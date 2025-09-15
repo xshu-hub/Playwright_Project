@@ -1,6 +1,6 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
-from typing import List, Dict
+from typing import List, Dict, Optional, Literal, Union
 
 
 class UserManagementPage(BasePage):
@@ -69,13 +69,13 @@ class UserManagementPage(BasePage):
         # 空状态
         self.empty_state = ".empty-state"
         
-    def navigate(self):
+    def navigate(self, url: Optional[str] = None, wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"] = "domcontentloaded") -> 'BasePage':
         """导航到用户管理页面"""
-        self.page.goto(self.url)
-        self.wait_for_page_load()
+        return super().navigate(url, wait_until)
         
-    def wait_for_page_load(self):
+    def wait_for_page_load(self, timeout: Optional[int] = None) -> None:
         """等待页面加载完成"""
+        super().wait_for_page_load(timeout)
         self.wait_for_element(self.page_header)
         self.wait_for_element(self.users_container)
         
@@ -110,10 +110,10 @@ class UserManagementPage(BasePage):
         rows = self.page.locator(self.user_row)
         for i in range(rows.count()):
             name = rows.nth(i).locator(self.user_name).text_content()
-            names.append(name)
+            names.append(name or "")
         return names
         
-    def get_user_info(self, index: int = 0) -> Dict[str, str]:
+    def get_user_info(self, index: int = 0) -> Dict[str, Optional[str]]:
         """获取指定用户的信息"""
         rows = self.page.locator(self.user_row)
         if index >= rows.count():
@@ -179,7 +179,7 @@ class UserManagementPage(BasePage):
         self.fill_user_form(name, username, email, password, role, status)
         self.click_save_user()
         
-    def edit_user(self, index: int, name: str = None, username: str = None, email: str = None, password: str = None, role: str = None, status: str = None):
+    def edit_user(self, index: int, name: Optional[str] = None, username: Optional[str] = None, email: Optional[str] = None, password: Optional[str] = None, role: Optional[str] = None, status: Optional[str] = None):
         """编辑用户信息"""
         self.click_edit_user(index)
         
@@ -215,7 +215,7 @@ class UserManagementPage(BasePage):
         """关闭模态框"""
         self.click(self.close_modal_button)
         
-    def get_modal_title(self) -> str:
+    def get_modal_title(self) -> Optional[str]:
         """获取模态框标题"""
         return self.page.locator(self.modal_title).text_content()
         
@@ -231,11 +231,11 @@ class UserManagementPage(BasePage):
         """检查是否显示空状态"""
         return self.page.locator(self.empty_state).is_visible()
         
-    def get_success_message(self) -> str:
+    def get_success_message(self) -> Optional[str]:
         """获取成功消息"""
         return self.page.locator(".alert-success").text_content()
         
-    def get_error_message(self) -> str:
+    def get_error_message(self) -> Optional[str]:
         """获取错误消息"""
         return self.page.locator(".alert-error").text_content()
         
@@ -254,11 +254,11 @@ class UserManagementPage(BasePage):
     def get_form_values(self) -> Dict[str, str]:
         """获取表单当前值"""
         return {
-            "name": self.page.locator(self.name_input).input_value(),
-            "username": self.page.locator(self.username_input).input_value(),
-            "email": self.page.locator(self.email_input).input_value(),
-            "role": self.page.locator(self.role_select).input_value(),
-            "status": self.page.locator(self.status_select).input_value()
+            "name": self.page.locator(self.name_input).input_value() or "",
+            "username": self.page.locator(self.username_input).input_value() or "",
+            "email": self.page.locator(self.email_input).input_value() or "",
+            "role": self.page.locator(self.role_select).input_value() or "",
+            "status": self.page.locator(self.status_select).input_value() or ""
         }
         
     def verify_page_elements(self):

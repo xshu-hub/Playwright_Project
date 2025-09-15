@@ -9,13 +9,12 @@
 """
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any, Union, Callable
-from playwright.sync_api import Page, Locator, expect, Error
+from typing import Optional, List, Dict, Any, Union, Callable, Literal
+from playwright.sync_api import Page, Locator, expect, Error, Cookie, ViewportSize, FrameLocator
 
 # 定义选择器类型
 SelectorType = Union[str, Locator]
 from loguru import logger
-import allure
 
 from utils.screenshot_helper import ScreenshotHelper
 from utils.logger_config import logger_config
@@ -55,7 +54,7 @@ class BasePage(ABC):
         """页面标题"""
         pass
     
-    def navigate(self, url: str = None, wait_until: str = "domcontentloaded") -> 'BasePage':
+    def navigate(self, url: Optional[str] = None, wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"] = "domcontentloaded") -> 'BasePage':
         """
         导航到页面
         
@@ -79,7 +78,7 @@ class BasePage(ABC):
             self.screenshot_helper.take_failure_screenshot("navigation_failed", str(e))
             raise
     
-    def wait_for_page_load(self, timeout: int = None) -> None:
+    def wait_for_page_load(self, timeout: Optional[int] = None) -> None:
         """
         等待页面加载完成
         
@@ -110,7 +109,7 @@ class BasePage(ABC):
         else:
             raise ValueError(f"不支持的选择器类型: {type(selector)}")
     
-    def get_element(self, selector: SelectorType, timeout: int = None) -> Locator:
+    def get_element(self, selector: SelectorType, timeout: Optional[int] = None) -> Locator:
         """
         获取页面元素
         
@@ -131,7 +130,7 @@ class BasePage(ABC):
             logger.error(f"获取元素失败: {selector_desc}, 错误: {str(e)}")
             raise
     
-    def click(self, selector: SelectorType, timeout: int = None, force: bool = False) -> 'BasePage':
+    def click(self, selector: SelectorType, timeout: Optional[int] = None, force: bool = False) -> 'BasePage':
         """
         点击元素
         
@@ -157,7 +156,7 @@ class BasePage(ABC):
             self.screenshot_helper.take_failure_screenshot("click_failed", str(e))
             raise
     
-    def double_click(self, selector: SelectorType, timeout: int = None) -> 'BasePage':
+    def double_click(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
         """
         双击元素
         
@@ -181,7 +180,7 @@ class BasePage(ABC):
             logger.error(f"❌ 元素双击失败: {selector_desc} | 错误: {str(e)}")
             raise
     
-    def fill(self, selector: SelectorType, value: str, timeout: int = None, clear: bool = True) -> 'BasePage':
+    def fill(self, selector: SelectorType, value: str, timeout: Optional[int] = None, clear: bool = True) -> 'BasePage':
         """
         填充输入框
         
@@ -209,7 +208,7 @@ class BasePage(ABC):
             logger.error(f"❌ 元素填充失败: {selector_desc} = '{value}' | 错误: {str(e)}")
             raise
     
-    def type_text(self, selector: SelectorType, text: str, delay: int = 100, timeout: int = None) -> 'BasePage':
+    def type_text(self, selector: SelectorType, text: str, delay: int = 100, timeout: Optional[int] = None) -> 'BasePage':
         """
         逐字符输入文本
         
@@ -235,7 +234,7 @@ class BasePage(ABC):
             logger.error(f"❌ 文本输入失败: {selector_desc} = '{text}' | 错误: {str(e)}")
             raise
     
-    def select_option(self, selector: SelectorType, value: Union[str, List[str]], timeout: int = None) -> 'BasePage':
+    def select_option(self, selector: SelectorType, value: Union[str, List[str]], timeout: Optional[int] = None) -> 'BasePage':
         """
         选择下拉框选项
         
@@ -260,7 +259,7 @@ class BasePage(ABC):
             logger.error(f"❌ 选项选择失败: {selector_desc} = '{value}' | 错误: {str(e)}")
             raise
     
-    def check(self, selector: SelectorType, timeout: int = None) -> 'BasePage':
+    def check(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
         """
         勾选复选框或单选框
         
@@ -284,7 +283,7 @@ class BasePage(ABC):
             logger.error(f"❌ 复选框勾选失败: {selector_desc} | 错误: {str(e)}")
             raise
     
-    def uncheck(self, selector: SelectorType, timeout: int = None) -> 'BasePage':
+    def uncheck(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
         """
         取消勾选复选框
         
@@ -308,7 +307,7 @@ class BasePage(ABC):
             logger.error(f"❌ 复选框取消勾选失败: {selector_desc} | 错误: {str(e)}")
             raise
     
-    def hover(self, selector: SelectorType, timeout: int = None) -> 'BasePage':
+    def hover(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
         """
         悬停在元素上
         
@@ -332,7 +331,7 @@ class BasePage(ABC):
             logger.error(f"❌ 元素悬停失败: {selector_desc} | 错误: {str(e)}")
             raise
     
-    def scroll_to(self, selector: SelectorType = None, x: int = None, y: int = None) -> 'BasePage':
+    def scroll_to(self, selector: Optional[SelectorType] = None, x: Optional[int] = None, y: Optional[int] = None) -> 'BasePage':
         """
         滚动到指定位置或元素
         
@@ -358,7 +357,7 @@ class BasePage(ABC):
             logger.error(f"滚动失败, 错误: {str(e)}")
             raise
     
-    def wait_for_element(self, selector: SelectorType, state: str = "visible", timeout: int = None) -> Locator:
+    def wait_for_element(self, selector: SelectorType, state: Literal["attached", "detached", "hidden", "visible"] = "visible", timeout: Optional[int] = None) -> Locator:
         """
         等待元素出现
         
@@ -382,7 +381,7 @@ class BasePage(ABC):
             logger.error(f"等待元素失败: {selector_desc}, 状态: {state}, 错误: {str(e)}")
             raise
     
-    def wait_for_element_stable(self, selector: SelectorType, stable_time: int = 500, timeout: int = None) -> Locator:
+    def wait_for_element_stable(self, selector: SelectorType, stable_time: int = 500, timeout: Optional[int] = None) -> Locator:
         """
         等待元素稳定(位置和大小不再变化)
         
@@ -427,7 +426,7 @@ class BasePage(ABC):
             logger.error(f"等待元素稳定失败: {selector_desc}, 错误: {str(e)}")
             raise
     
-    def wait_for_text(self, selector: SelectorType, text: str, timeout: int = None) -> bool:
+    def wait_for_text(self, selector: SelectorType, text: str, timeout: Optional[int] = None) -> bool:
         """
         等待元素包含指定文本
         
@@ -451,7 +450,7 @@ class BasePage(ABC):
             logger.error(f"等待文本失败: {selector_desc}, 文本: {text}, 错误: {str(e)}")
             return False
     
-    def get_text(self, selector: SelectorType, timeout: int = None) -> str:
+    def get_text(self, selector: SelectorType, timeout: Optional[int] = None) -> str:
         """
         获取元素文本
         
@@ -474,7 +473,7 @@ class BasePage(ABC):
             logger.error(f"❌ 元素文本获取失败: {selector_desc} | 错误: {str(e)}")
             raise
     
-    def get_attribute(self, selector: SelectorType, attribute: str, timeout: int = None) -> Optional[str]:
+    def get_attribute(self, selector: SelectorType, attribute: str, timeout: Optional[int] = None) -> Optional[str]:
         """
         获取元素属性
         
@@ -498,7 +497,7 @@ class BasePage(ABC):
             logger.error(f"❌ 元素属性获取失败: {selector_desc}[{attribute}] | 错误: {str(e)}")
             raise
     
-    def is_visible(self, selector: SelectorType, timeout: int = None) -> bool:
+    def is_visible(self, selector: SelectorType, timeout: Optional[int] = None) -> bool:
         """
         检查元素是否可见
         
@@ -513,10 +512,10 @@ class BasePage(ABC):
         try:
             element = self._resolve_selector(selector)
             return element.is_visible(timeout=timeout)
-        except Exception:
+        except (Error, TimeoutError):
             return False
     
-    def is_enabled(self, selector: SelectorType, timeout: int = None) -> bool:
+    def is_enabled(self, selector: SelectorType, timeout: Optional[int] = None) -> bool:
         """
         检查元素是否可用
         
@@ -530,8 +529,8 @@ class BasePage(ABC):
         timeout = timeout or self.short_timeout
         try:
             element = self.get_element(selector, timeout)
-            return element.is_enabled()
-        except Exception:
+            return element.is_enabled(timeout=timeout)
+        except (Error, TimeoutError):
             return False
     
     def get_current_url(self) -> str:
@@ -562,7 +561,7 @@ class BasePage(ABC):
         logger_config.log_page_action("刷新页面")
         try:
             self.page.reload(wait_until="domcontentloaded", timeout=self.long_timeout)
-            logger.debug("页面刷新成功")
+            logger.info("🔄 页面刷新成功")
             return self
         except Exception as e:
             logger.error(f"页面刷新失败: {str(e)}")
@@ -578,7 +577,7 @@ class BasePage(ABC):
         logger_config.log_page_action("返回上一页")
         try:
             self.page.go_back(wait_until="domcontentloaded", timeout=self.long_timeout)
-            logger.debug("返回上一页成功")
+            logger.info("⬅️ 返回上一页成功")
             return self
         except Exception as e:
             logger.error(f"返回上一页失败: {str(e)}")
@@ -594,7 +593,7 @@ class BasePage(ABC):
         logger_config.log_page_action("前进到下一页")
         try:
             self.page.go_forward(wait_until="domcontentloaded", timeout=self.long_timeout)
-            logger.debug("前进到下一页成功")
+            logger.info("➡️ 前进到下一页成功")
             return self
         except Exception as e:
             logger.error(f"前进到下一页失败: {str(e)}")
@@ -619,7 +618,7 @@ class BasePage(ABC):
             logger.error(f"执行脚本失败: {script[:100]}..., 错误: {str(e)}")
             raise
     
-    def take_screenshot(self, filename: str = None, description: str = "") -> Optional[str]:
+    def take_screenshot(self, filename: Optional[str] = None, description: str = "") -> Optional[str]:
         """
         截取页面截图
         
@@ -646,7 +645,7 @@ class BasePage(ABC):
         time.sleep(seconds)
         return self
     
-    def smart_wait(self, condition_func, timeout: int = None, poll_interval: float = 0.5) -> 'BasePage':
+    def smart_wait(self, condition_func, timeout: Optional[int] = None, poll_interval: float = 0.5) -> 'BasePage':
         """
         智能等待，基于条件函数
         
@@ -666,7 +665,7 @@ class BasePage(ABC):
                 if condition_func():
                     logger.debug("智能等待条件满足")
                     return self
-            except Exception:
+            except (Error, TimeoutError, AssertionError):
                 pass
             
             current_time = time.time() * 1000
@@ -676,7 +675,7 @@ class BasePage(ABC):
             
             time.sleep(poll_interval)
     
-    def wait_for_network_idle(self, timeout: int = None, idle_time: int = 500) -> 'BasePage':
+    def wait_for_network_idle(self, timeout: Optional[int] = None, idle_time: int = 500) -> 'BasePage':
         """
         等待网络空闲
         
@@ -689,8 +688,19 @@ class BasePage(ABC):
         """
         timeout = timeout or self.long_timeout
         try:
-            self.page.wait_for_load_state("networkidle", timeout=timeout)
-            logger.debug("网络已空闲")
+            # 使用 idle_time 参数来等待网络空闲
+            import time
+            start_time = time.time() * 1000
+            while (time.time() * 1000 - start_time) < timeout:
+                try:
+                    # 等待网络空闲状态，使用 idle_time 作为空闲判断时间
+                    self.page.wait_for_load_state("networkidle", timeout=idle_time)
+                    logger.debug(f"网络已空闲 (空闲时间: {idle_time}ms)")
+                    return self
+                except (Error, TimeoutError):
+                    # 如果在 idle_time 内没有达到空闲状态，继续等待
+                    time.sleep(0.1)
+            logger.warning(f"等待网络空闲超时: {timeout}ms")
             return self
         except Exception as e:
             logger.warning(f"等待网络空闲超时: {str(e)}")
@@ -698,8 +708,9 @@ class BasePage(ABC):
     
     # ==================== 增强功能方法 ====================
     
-    def retry_action(self, action_func: Callable, max_retries: int = 3, 
-                    retry_delay: float = 1.0, expected_exceptions: tuple = None) -> Any:
+    @staticmethod
+    def retry_action(action_func: Callable, max_retries: int = 3, 
+                    retry_delay: float = 1.0, expected_exceptions: Optional[tuple] = None) -> Any:
         """
         重试机制执行操作
         
@@ -716,7 +727,7 @@ class BasePage(ABC):
             最后一次执行的异常
         """
         if expected_exceptions is None:
-            expected_exceptions = (Error, TimeoutError, AssertionError)
+            expected_exceptions = (Exception, TimeoutError, AssertionError)
         
         last_exception = None
         
@@ -735,10 +746,13 @@ class BasePage(ABC):
                 else:
                     logger.error(f"操作在 {max_retries + 1} 次尝试后仍然失败: {str(e)}")
         
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError("操作失败但未捕获到异常")
     
     def wait_for_condition(self, condition_func: Callable[[], bool], 
-                          timeout: int = None, poll_interval: float = 0.5,
+                          timeout: Optional[int] = None, poll_interval: float = 0.5,
                           error_message: str = "条件等待超时") -> 'BasePage':
         """
         等待条件满足
@@ -773,7 +787,7 @@ class BasePage(ABC):
             
             time.sleep(poll_interval)
     
-    def get_elements(self, selector: SelectorType, timeout: int = None) -> List[Locator]:
+    def get_elements(self, selector: SelectorType, timeout: Optional[int] = None) -> List[Locator]:
         """
         获取多个元素
         
@@ -787,6 +801,8 @@ class BasePage(ABC):
         timeout = timeout or self.timeout
         try:
             locator = self._resolve_selector(selector)
+            # 等待至少一个元素出现
+            locator.first.wait_for(state="attached", timeout=timeout)
             elements = locator.all()
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
             logger.debug(f"找到 {len(elements)} 个元素: {selector_desc}")
@@ -796,7 +812,7 @@ class BasePage(ABC):
             logger.error(f"获取元素列表失败 {selector_desc}: {str(e)}")
             return []
     
-    def get_elements_count(self, selector: SelectorType, timeout: int = None) -> int:
+    def get_elements_count(self, selector: SelectorType, timeout: Optional[int] = None) -> int:
         """
         获取元素数量
         
@@ -810,6 +826,12 @@ class BasePage(ABC):
         timeout = timeout or self.timeout
         try:
             locator = self._resolve_selector(selector)
+            # 使用 timeout 参数等待至少一个元素出现，然后获取数量
+            try:
+                locator.first.wait_for(state="attached", timeout=timeout)
+            except (Error, TimeoutError):
+                # 如果没有元素，返回 0
+                pass
             count = locator.count()
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
             logger.debug(f"元素数量 {selector_desc}: {count}")
@@ -820,7 +842,7 @@ class BasePage(ABC):
             return 0
     
     def wait_for_element_count(self, selector: SelectorType, expected_count: int, 
-                              timeout: int = None) -> 'BasePage':
+                              timeout: Optional[int] = None) -> 'BasePage':
         """
         等待元素数量达到期望值
         
@@ -844,7 +866,7 @@ class BasePage(ABC):
         return self
     
     def drag_and_drop(self, source_selector: SelectorType, target_selector: SelectorType, 
-                     timeout: int = None) -> 'BasePage':
+                     timeout: Optional[int] = None) -> 'BasePage':
         """
         拖拽操作
         
@@ -872,7 +894,7 @@ class BasePage(ABC):
             self.take_screenshot(f"drag_drop_error_{int(time.time())}")
             raise
     
-    def upload_file(self, selector: SelectorType, file_path: str, timeout: int = None) -> 'BasePage':
+    def upload_file(self, selector: SelectorType, file_path: str, timeout: Optional[int] = None) -> 'BasePage':
         """
         文件上传
         
@@ -897,7 +919,7 @@ class BasePage(ABC):
             self.take_screenshot(f"upload_error_{int(time.time())}")
             raise
     
-    def switch_to_frame(self, frame_selector: SelectorType, timeout: int = None) -> Page:
+    def switch_to_frame(self, frame_selector: SelectorType, timeout: Optional[int] = None) -> FrameLocator:
         """
         切换到iframe
         
@@ -912,13 +934,19 @@ class BasePage(ABC):
         try:
             selector_desc = str(frame_selector) if isinstance(frame_selector, str) else f"Locator({frame_selector})"
             logger.info(f"切换到iframe: {selector_desc}")
-            frame_element = self.get_element(frame_selector, timeout)
-            frame = frame_element.content_frame()
             
-            if frame is None:
-                raise ValueError(f"无法获取iframe内容: {selector_desc}")
+            # 先等待iframe元素可见
+            self.wait_for_element(frame_selector, timeout=timeout)
             
-            return frame
+            # 使用page.frame_locator来获取frame
+            if isinstance(frame_selector, str):
+                frame_locator = self.page.frame_locator(frame_selector)
+            else:
+                # 如果是Locator对象，先获取其选择器字符串
+                frame_locator = self.page.frame_locator(str(frame_selector))
+            
+            # 返回frame的第一个frame对象
+            return frame_locator.first
         except Exception as e:
             logger.error(f"切换iframe失败: {str(e)}")
             raise
@@ -953,8 +981,8 @@ class BasePage(ABC):
             logger.error(f"清除cookies失败: {str(e)}")
             return self
     
-    def set_cookie(self, name: str, value: str, domain: str = None, 
-                  path: str = "/", expires: int = None) -> 'BasePage':
+    def set_cookie(self, name: str, value: str, domain: Optional[str] = None, 
+                  path: str = "/", expires: Optional[int] = None) -> 'BasePage':
         """
         设置cookie
         
@@ -969,7 +997,7 @@ class BasePage(ABC):
             页面实例
         """
         try:
-            cookie_data = {
+            cookie_data: Dict[str, Any] = {
                 'name': name,
                 'value': value,
                 'path': path
@@ -981,13 +1009,13 @@ class BasePage(ABC):
                 cookie_data['expires'] = expires
             
             logger.info(f"设置cookie: {name}={value}")
-            self.page.context.add_cookies([cookie_data])
+            self.page.context.add_cookies([cookie_data])  # type: ignore[list-item]
             return self
         except Exception as e:
             logger.error(f"设置cookie失败: {str(e)}")
             return self
     
-    def get_cookies(self) -> List[Dict[str, Any]]:
+    def get_cookies(self) -> List[Cookie]:
         """
         获取所有cookies
         
@@ -1021,7 +1049,7 @@ class BasePage(ABC):
             logger.error(f"设置视口大小失败: {str(e)}")
             return self
     
-    def get_viewport_size(self) -> Dict[str, int]:
+    def get_viewport_size(self) -> ViewportSize:
         """
         获取视口大小
         
@@ -1031,7 +1059,7 @@ class BasePage(ABC):
         try:
             viewport = self.page.viewport_size
             logger.debug(f"当前视口大小: {viewport}")
-            return viewport
+            return viewport or {'width': 0, 'height': 0}
         except Exception as e:
             logger.error(f"获取视口大小失败: {str(e)}")
             return {'width': 0, 'height': 0}
