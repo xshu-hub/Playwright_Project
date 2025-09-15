@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录 - 测试系统</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            height: 50px;
+            font-size: 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 0 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            height: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .demo-accounts {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .demo-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .demo-account {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e9ecef;
+        }
+        
+        .demo-account:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .demo-account:last-child {
+            margin-bottom: 0;
+        }
+        
+        .demo-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .demo-username {
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .demo-role {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        
+        .demo-password {
+            font-size: 12px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 6px;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card fade-in">
+            <div class="login-header">
+                <h1 class="login-title">欢迎登录</h1>
+                <p class="login-subtitle">Web UI 自动化测试系统</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" class="form-control" placeholder="用户名" required minlength="3">
+                </div>
+                
+                <div class="form-group">
+                    <input type="password" id="password" class="form-control" placeholder="密码" required>
+                </div>
+                
+                <div class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe">记住登录状态</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary login-btn">登录</button>
+                
+                <div id="errorMessage" class="error-message hidden"></div>
+            </form>
+            
+            <div class="demo-accounts">
+                <div class="demo-title">🚀 测试账号（点击快速填入）</div>
+                
+                <div class="demo-account" data-username="admin" data-password="admin123">
+                    <div class="demo-info">
+                        <span class="demo-username">admin</span>
+                        <span class="demo-role">管理员账号</span>
+                    </div>
+                    <span class="demo-password">admin123</span>
+                </div>
+                
+                <div class="demo-account" data-username="manager" data-password="manager123">
+                    <div class="demo-info">
+                        <span class="demo-username">manager</span>
+                        <span class="demo-role">经理账号</span>
+                    </div>
+                    <span class="demo-password">manager123</span>
+                </div>
+                
+                <div class="demo-account" data-username="user1" data-password="user123">
+                    <div class="demo-info">
+                        <span class="demo-username">user1</span>
+                        <span class="demo-role">普通用户</span>
+                    </div>
+                    <span class="demo-password">user123</span>
+                </div>
+                
+                <div class="demo-account" data-username="user2" data-password="user123">
+                    <div class="demo-info">
+                        <span class="demo-username">user2</span>
+                        <span class="demo-role">普通用户</span>
+                    </div>
+                    <span class="demo-password">user123</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+    <script>
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const rememberMeCheckbox = document.getElementById('rememberMe');
+            const errorMessage = document.getElementById('errorMessage');
+            const demoAccounts = document.querySelectorAll('.demo-account');
+            
+            // 检查是否已经登录
+            if (Utils.auth.isLoggedIn()) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            
+            // 加载记住的登录信息
+            const rememberedUser = Utils.storage.get('rememberedUser');
+            if (rememberedUser) {
+                usernameInput.value = rememberedUser.username;
+                passwordInput.value = rememberedUser.password;
+                rememberMeCheckbox.checked = true;
+            }
+            
+            // 演示账号点击事件
+            demoAccounts.forEach(account => {
+                account.addEventListener('click', function() {
+                    const username = this.dataset.username;
+                    const password = this.dataset.password;
+                    
+                    usernameInput.value = username;
+                    passwordInput.value = password;
+                    
+                    // 添加动画效果
+                    usernameInput.style.background = '#e3f2fd';
+                    passwordInput.style.background = '#e3f2fd';
+                    
+                    setTimeout(() => {
+                        usernameInput.style.background = '';
+                        passwordInput.style.background = '';
+                    }, 1000);
+                });
+            });
+            
+            // 登录表单提交
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                // 隐藏之前的错误信息
+                errorMessage.classList.add('hidden');
+                
+                try {
+                    // 验证输入
+                    Utils.validation.required(username, '用户名');
+                    Utils.validation.required(password, '密码');
+                    
+                    // 查找用户
+                    const user = Utils.data.findUserByUsername(username);
+                    
+                    if (!user) {
+                        throw new Error('用户名不存在');
+                    }
+                    
+                    if (user.password !== password) {
+                        throw new Error('密码错误');
+                    }
+                    
+                    // 登录成功
+                    Utils.auth.login(user);
+                    
+                    // 处理记住登录状态
+                    if (rememberMeCheckbox.checked) {
+                        Utils.storage.set('rememberedUser', { username, password });
+                    } else {
+                        Utils.storage.remove('rememberedUser');
+                    }
+                    
+                    Utils.ui.showMessage('登录成功！', 'success');
+                    
+                    // 延迟跳转，让用户看到成功消息
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                    
+                } catch (error) {
+                    // 显示错误信息
+                    errorMessage.textContent = error.message;
+                    errorMessage.classList.remove('hidden');
+                    
+                    // 添加震动效果
+                    loginForm.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        loginForm.style.animation = '';
+                    }, 500);
+                }
+            });
+            
+            // 输入框焦点事件
+            [usernameInput, passwordInput].forEach(input => {
+                input.addEventListener('focus', function() {
+                    errorMessage.classList.add('hidden');
+                });
+            });
+        });
+    </script>
+    
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+    </style>
+</body>
+</html>

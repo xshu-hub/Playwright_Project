@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申请详情 - 测试系统</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin: 0;
+        }
+        
+        .page-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        .detail-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .detail-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-badge.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .priority-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .priority-badge.high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .priority-badge.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .priority-badge.low {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            word-break: break-word;
+        }
+        
+        .description-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e9ecef;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+        
+        .timeline-item.approved::before {
+            background: #28a745;
+            box-shadow: 0 0 0 2px #28a745;
+        }
+        
+        .timeline-item.rejected::before {
+            background: #dc3545;
+            box-shadow: 0 0 0 2px #dc3545;
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-title {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .timeline-time {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .timeline-content {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .approval-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .approval-form {
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 6px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            color: #155724;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 6px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .not-found {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .not-found-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .not-found-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .not-found-description {
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .page-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .approval-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="dashboard.html">仪表板</a>
+                <span>></span>
+                <a href="approval-list.html">申请列表</a>
+                <span>></span>
+                <span>申请详情</span>
+            </div>
+            <h1 class="page-title" id="pageTitle">申请详情</h1>
+            <div class="page-actions" id="pageActions">
+                <!-- 动态生成操作按钮 -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="detail-container" id="detailContainer">
+            <!-- 申请详情将通过 JavaScript 动态生成 -->
+        </div>
+    </div>
+    
+    <script src="../js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态
+            if (!Utils.auth.requireAuth()) {
+                return;
+            }
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const approvalId = urlParams.get('id');
+            const detailContainer = document.getElementById('detailContainer');
+            const pageTitle = document.getElementById('pageTitle');
+            const pageActions = document.getElementById('pageActions');
+            
+            if (!approvalId) {
+                showNotFound('缺少申请ID参数');
+                return;
+            }
+            
+            // 获取当前用户
+            const currentUser = Utils.auth.getCurrentUser();
+            
+            // 加载申请详情
+            function loadApprovalDetail() {
+                try {
+                    const approval = Utils.data.getApproval(approvalId);
+                    
+                    if (!approval) {
+                        showNotFound('申请不存在或已被删除');
+                        return;
+                    }
+                    
+                    renderApprovalDetail(approval);
+                } catch (error) {
+                    showNotFound('加载申请详情失败：' + error.message);
+                }
+            }
+            
+            // 显示未找到页面
+            function showNotFound(message) {
+                detailContainer.innerHTML = `
+                    <div class="detail-section">
+                        <div class="not-found">
+                            <div class="not-found-icon">❌</div>
+                            <div class="not-found-title">申请不存在</div>
+                            <div class="not-found-description">${message}</div>
+                            <a href="approval-list.html" class="btn btn-primary">返回申请列表</a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 渲染申请详情
+            function renderApprovalDetail(approval) {
+                const statusText = {
+                    'pending': '待审批',
+                    'approved': '已通过',
+                    'rejected': '已拒绝'
+                }[approval.status] || approval.status;
+                
+                const typeText = {
+                    'leave': '请假申请',
+                    'expense': '费用报销',
+                    'purchase': '采购申请',
+                    'project': '项目申请',
+                    'other': '其他申请'
+                }[approval.type] || approval.type;
+                
+                const priorityText = {
+                    'high': '🔴 紧急',
+                    'medium': '🟡 普通',
+                    'low': '🟢 不急'
+                }[approval.priority] || approval.priority;
+                
+                // 更新页面标题
+                pageTitle.textContent = approval.title;
+                
+                // 生成操作按钮
+                let actionsHtml = '<a href="approval-list.html" class="btn btn-secondary">返回列表</a>';
+                
+                // 如果是申请人且状态为待审批，可以编辑和撤销
+                if (approval.applicant === currentUser.username && approval.status === 'pending') {
+                    actionsHtml += `
+                        <a href="approval-edit.html?id=${approval.id}" class="btn btn-primary">编辑申请</a>
+                        <button onclick="cancelApproval('${approval.id}')" class="btn btn-danger">撤销申请</button>
+                    `;
+                }
+                
+                // 如果是管理员且状态为待审批，可以审批
+                if (currentUser.role === 'admin' && approval.status === 'pending') {
+                    actionsHtml += `
+                        <button onclick="showApprovalForm('approve')" class="btn btn-success">通过申请</button>
+                        <button onclick="showApprovalForm('reject')" class="btn btn-danger">拒绝申请</button>
+                    `;
+                }
+                
+                pageActions.innerHTML = actionsHtml;
+                
+                // 生成详情内容
+                detailContainer.innerHTML = `
+                    <!-- 基本信息 -->
+                    <div class="detail-section">
+                        <div class="status-header">
+                            <div class="status-info">
+                                <span class="status-badge ${approval.status}">${statusText}</span>
+                                <span class="priority-badge ${approval.priority}">${priorityText}</span>
+                            </div>
+                            <div style="font-size: 12px; color: #666; font-family: monospace;">ID: ${approval.id}</div>
+                        </div>
+                        
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">申请类型</div>
+                                <div class="detail-value">${typeText}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">申请人</div>
+                                <div class="detail-value">${approval.applicantName} (${approval.applicant})</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">联系邮箱</div>
+                                <div class="detail-value">${approval.applicantEmail}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">提交时间</div>
+                                <div class="detail-value">${new Date(approval.createdAt).toLocaleString('zh-CN')}</div>
+                            </div>
+                            ${approval.startTime ? `
+                            <div class="detail-item">
+                                <div class="detail-label">开始时间</div>
+                                <div class="detail-value">${new Date(approval.startTime).toLocaleString('zh-CN')}</div>
+                            </div>
+                            ` : ''}
+                            ${approval.endTime ? `
+                            <div class="detail-item">
+                                <div class="detail-label">结束时间</div>
+                                <div class="detail-value">${new Date(approval.endTime).toLocaleString('zh-CN')}</div>
+                            </div>
+                            ` : ''}
+                            ${approval.amount ? `
+                            <div class="detail-item">
+                                <div class="detail-label">涉及金额</div>
+                                <div class="detail-value">¥${approval.amount.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- 申请描述 -->
+                    <div class="detail-section">
+                        <h2 class="section-title">
+                            <span>📝</span>
+                            申请描述
+                        </h2>
+                        <div class="description-content">${approval.description}</div>
+                        ${approval.remarks ? `
+                        <h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 16px; color: #666;">备注信息</h3>
+                        <div class="description-content">${approval.remarks}</div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- 审批历史 -->
+                    <div class="detail-section">
+                        <h2 class="section-title">
+                            <span>📋</span>
+                            审批历史
+                        </h2>
+                        <div class="timeline" id="approvalTimeline">
+                            <!-- 审批历史将动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 审批表单（仅管理员可见） -->
+                    <div class="detail-section" id="approvalFormSection" style="display: none;">
+                        <h2 class="section-title">
+                            <span>✍️</span>
+                            审批操作
+                        </h2>
+                        <div id="approvalFormContainer">
+                            <!-- 审批表单将动态生成 -->
+                        </div>
+                    </div>
+                `;
+                
+                // 渲染审批历史
+                renderApprovalHistory(approval);
+            }
+            
+            // 渲染审批历史
+            function renderApprovalHistory(approval) {
+                const timeline = document.getElementById('approvalTimeline');
+                const history = approval.history || [];
+                
+                // 添加创建记录
+                let timelineHtml = `
+                    <div class="timeline-item">
+                        <div class="timeline-header">
+                            <div class="timeline-title">📝 申请已提交</div>
+                            <div class="timeline-time">${new Date(approval.createdAt).toLocaleString('zh-CN')}</div>
+                        </div>
+                        <div class="timeline-content">
+                            ${approval.applicantName} 提交了申请
+                        </div>
+                    </div>
+                `;
+                
+                // 添加审批历史
+                history.forEach(record => {
+                    const actionText = {
+                        'approved': '✅ 申请已通过',
+                        'rejected': '❌ 申请已拒绝'
+                    }[record.action] || record.action;
+                    
+                    timelineHtml += `
+                        <div class="timeline-item ${record.action}">
+                            <div class="timeline-header">
+                                <div class="timeline-title">${actionText}</div>
+                                <div class="timeline-time">${new Date(record.timestamp).toLocaleString('zh-CN')}</div>
+                            </div>
+                            <div class="timeline-content">
+                                审批人：${record.reviewerName} (${record.reviewer})<br>
+                                ${record.comment ? `审批意见：${record.comment}` : '无审批意见'}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                timeline.innerHTML = timelineHtml;
+            }
+            
+            // 显示审批表单
+            window.showApprovalForm = function(action) {
+                const formSection = document.getElementById('approvalFormSection');
+                const formContainer = document.getElementById('approvalFormContainer');
+                
+                const actionText = action === 'approve' ? '通过' : '拒绝';
+                const buttonClass = action === 'approve' ? 'btn-success' : 'btn-danger';
+                
+                formContainer.innerHTML = `
+                    <form id="approvalForm">
+                        <div class="form-group">
+                            <label class="form-label">审批意见</label>
+                            <textarea id="approvalComment" class="form-control" placeholder="请输入审批意见（可选）"></textarea>
+                        </div>
+                        
+                        <div id="approvalMessage"></div>
+                        
+                        <div class="approval-actions">
+                            <button type="button" onclick="hideApprovalForm()" class="btn btn-secondary">取消</button>
+                            <button type="submit" class="btn ${buttonClass}">确认${actionText}</button>
+                        </div>
+                    </form>
+                `;
+                
+                formSection.style.display = 'block';
+                formSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // 绑定表单提交事件
+                document.getElementById('approvalForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    processApproval(action);
+                });
+            };
+            
+            // 隐藏审批表单
+            window.hideApprovalForm = function() {
+                document.getElementById('approvalFormSection').style.display = 'none';
+            };
+            
+            // 处理审批
+            function processApproval(action) {
+                const comment = document.getElementById('approvalComment').value.trim();
+                const messageContainer = document.getElementById('approvalMessage');
+                
+                try {
+                    Utils.data.processApproval(approvalId, action, comment, currentUser);
+                    
+                    messageContainer.innerHTML = `
+                        <div class="success-message">
+                            ✅ 审批处理成功！
+                        </div>
+                    `;
+                    
+                    Utils.ui.showMessage('审批处理成功', 'success');
+                    
+                    // 延迟刷新页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                    
+                } catch (error) {
+                    messageContainer.innerHTML = `
+                        <div class="error-message">
+                            ❌ ${error.message}
+                        </div>
+                    `;
+                }
+            }
+            
+            // 撤销申请
+            window.cancelApproval = function(id) {
+                if (confirm('确定要撤销这个申请吗？撤销后将无法恢复。')) {
+                    try {
+                        Utils.data.deleteApproval(id);
+                        Utils.ui.showMessage('申请已撤销', 'success');
+                        
+                        setTimeout(() => {
+                            window.location.href = 'approval-list.html';
+                        }, 1500);
+                    } catch (error) {
+                        Utils.ui.showMessage('撤销失败：' + error.message, 'error');
+                    }
+                }
+            };
+            
+            // 初始加载
+            loadApprovalDetail();
+        });
+    </script>
+</body>
+</html>
