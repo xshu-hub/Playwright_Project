@@ -1,0 +1,144 @@
+{
+  "urls": {
+    "test": {
+      "base_url": "http://localhost:8080",
+      "login_url": "http://localhost:8080/login",
+      "dashboard_url": "http://localhost:8080/dashboard",
+      "user_management_url": "http://localhost:8080/user-management",
+      "approval_url": "http://localhost:8080/approval"
+    },
+    "staging": {
+      "base_url": "${STAGING_BASE_URL}",
+      "login_url": "${STAGING_BASE_URL}/login",
+      "dashboard_url": "${STAGING_BASE_URL}/dashboard",
+      "user_management_url": "${STAGING_BASE_URL}/user-management",
+      "approval_url": "${STAGING_BASE_URL}/approval"
+    },
+    "production": {
+      "base_url": "${PROD_BASE_URL}",
+      "login_url": "${PROD_BASE_URL}/login",
+      "dashboard_url": "${PROD_BASE_URL}/dashboard",
+      "user_management_url": "${PROD_BASE_URL}/user-management",
+      "approval_url": "${PROD_BASE_URL}/approval"
+    },
+    "default": {
+      "base_url": "http://localhost:8080",
+      "login_url": "http://localhost:8080/login",
+      "dashboard_url": "http://localhost:8080/dashboard",
+      "user_management_url": "http://localhost:8080/user-management",
+      "approval_url": "http://localhost:8080/approval"
+    }
+  },
+  "page_elements": {
+    "login_page": {
+      "username_input": "input[name='username']",
+      "password_input": "input[name='password']",
+      "login_button": "button[type='submit']",
+      "error_message": ".error-message",
+      "forgot_password_link": "a[href='/forgot-password']",
+      "remember_me_checkbox": "input[name='remember']"
+    },
+    "dashboard_page": {
+      "welcome_message": ".welcome-message",
+      "user_menu": ".user-menu",
+      "logout_button": "button[data-action='logout']",
+      "navigation_menu": ".nav-menu",
+      "user_management_link": "a[href='/user-management']",
+      "approval_link": "a[href='/approval']"
+    },
+    "user_management_page": {
+      "add_user_button": "button[data-action='add-user']",
+      "search_input": "input[name='search']",
+      "search_button": "button[data-action='search']",
+      "user_table": "table.user-table",
+      "user_rows": "table.user-table tbody tr",
+      "edit_buttons": "button[data-action='edit']",
+      "delete_buttons": "button[data-action='delete']",
+      "status_toggles": "button[data-action='toggle-status']"
+    },
+    "user_form": {
+      "username_input": "input[name='username']",
+      "password_input": "input[name='password']",
+      "name_input": "input[name='name']",
+      "email_input": "input[name='email']",
+      "role_select": "select[name='role']",
+      "status_select": "select[name='status']",
+      "description_textarea": "textarea[name='description']",
+      "save_button": "button[data-action='save']",
+      "cancel_button": "button[data-action='cancel']",
+      "form_errors": ".form-error"
+    },
+    "approval_page": {
+      "pending_requests_table": "table.pending-requests",
+      "approve_buttons": "button[data-action='approve']",
+      "reject_buttons": "button[data-action='reject']",
+      "request_details": ".request-details",
+      "filter_select": "select[name='filter']",
+      "date_range_picker": ".date-range-picker"
+    }
+  },
+  "timeouts": {
+    "default": 5000,
+    "page_load": 10000,
+    "element_wait": 3000,
+    "api_request": 15000,
+    "file_upload": 30000
+  },
+  "test_settings": {
+    "screenshot_on_failure": true,
+    "video_recording": true,
+    "slow_motion": 0,
+    "headless": false,
+    "browser_type": "chromium",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "locale": "zh-CN",
+    "timezone": "Asia/Shanghai"
+  },
+  "validation_rules": {
+    "username": {
+      "min_length": 3,
+      "max_length": 20,
+      "pattern": "^[a-zA-Z0-9_]+$",
+      "required": true
+    },
+    "password": {
+      "min_length": 6,
+      "max_length": 50,
+      "required": true,
+      "must_contain": ["letter", "number"]
+    },
+    "email": {
+      "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+      "required": true
+    },
+    "name": {
+      "min_length": 2,
+      "max_length": 50,
+      "required": true
+    }
+  },
+  "error_messages": {
+    "login": {
+      "invalid_credentials": "用户名或密码错误",
+      "account_disabled": "账户已被禁用",
+      "account_locked": "账户已被锁定",
+      "session_expired": "会话已过期，请重新登录"
+    },
+    "user_management": {
+      "duplicate_username": "用户名已存在",
+      "duplicate_email": "邮箱已存在",
+      "invalid_email_format": "邮箱格式不正确",
+      "password_too_weak": "密码强度不够",
+      "required_field_missing": "必填字段不能为空"
+    },
+    "general": {
+      "network_error": "网络连接错误",
+      "server_error": "服务器内部错误",
+      "permission_denied": "权限不足",
+      "operation_timeout": "操作超时"
+    }
+  }
+}

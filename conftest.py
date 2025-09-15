@@ -14,11 +14,11 @@ sys.path.insert(0, str(project_root))
 
 from config.playwright_config import PLAYWRIGHT_CONFIG
 from config.env_config import config_manager
-from utils.logger_config import logger_config
+from utils.logger_config import logger_config, setup_scenario_logger, get_scenario_logger
 from utils.screenshot_helper import ScreenshotHelper
 from loguru import logger
 
-# 初始化日志配置
+# 初始化全局日志配置（用于非测试场景的日志）
 logger_config.setup_logger(
     level="INFO",
     console_output=True,
@@ -116,27 +116,6 @@ def pytest_configure(config):
 def pytest_unconfigure(config):
     """Pytest 清理钩子"""
     logger.info(f"测试结束时间: {datetime.now()}")
-    
-    # 自动生成Allure HTML报告
-    if hasattr(config, '_current_session_dir') and config._current_session_dir:
-        session_dir = config._current_session_dir
-        allure_results_dir = session_dir / 'allure-results'
-        allure_report_dir = session_dir / 'allure-report'
-        
-        # 检查是否有allure-results数据
-        if allure_results_dir.exists() and any(allure_results_dir.iterdir()):
-            try:
-                import subprocess
-                # 生成Allure HTML报告
-                cmd = f'allure generate "{allure_results_dir}" -o "{allure_report_dir}" --clean'
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
-                
-                if result.returncode == 0:
-                    logger.info(f"Allure报告已生成: {allure_report_dir}/index.html")
-                else:
-                    logger.warning(f"Allure报告生成失败: {result.stderr}")
-            except Exception as e:
-                logger.error(f"生成Allure报告时出错: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -284,10 +263,17 @@ def test_logger(request):
     """自动记录测试开始和结束，并处理视频清理"""
     from loguru import logger
     test_name = request.node.name
+    test_file_path = str(request.node.fspath) if hasattr(request.node, 'fspath') else str(request.node.path)
+    
+    # 设置场景感知的日志配置
+    setup_scenario_logger(test_path=test_file_path)
+    
+    # 获取场景感知的日志器
+    scenario_logger = get_scenario_logger(test_path=test_file_path)
     
     # 记录测试开始
     logger_config.log_test_start(test_name)
-    logger.info(f"开始执行测试: {test_name}")
+    scenario_logger.info(f"开始执行测试: {test_name} (文件: {test_file_path})")
     
     def fin():
         # 记录测试结束
@@ -298,7 +284,7 @@ def test_logger(request):
             test_result = "SKIPPED"
             
         logger_config.log_test_end(test_name, test_result)
-        logger.info(f"测试执行完成: {test_name}")
+        scenario_logger.info(f"测试执行完成: {test_name} - 结果: {test_result}")
         
         # 处理失败测试的视频 - 添加到Allure报告
         if hasattr(request.node, '_video_for_allure') and request.node._video_for_allure:
