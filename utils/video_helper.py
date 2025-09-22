@@ -36,7 +36,13 @@ class VideoHelper:
             video_path = page.video.path() if page.video else None
             return str(video_path) if video_path else None
         except Exception as e:
-            logger.error(f"获取视频路径失败: {str(e)}")
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'page_url': page.url if page else 'Unknown',
+                'video_enabled': hasattr(page, 'video') and page.video is not None if page else False
+            }
+            logger.error(f"获取视频路径失败 [VID_001] | 页面URL: {error_details['page_url']} | 视频启用: {error_details['video_enabled']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']}")
             return None
     
     def save_video_on_failure(
@@ -100,7 +106,7 @@ class VideoHelper:
             try:
                 shutil.move(str(source_path), str(failed_video_path))
                 file_size = failed_video_path.stat().st_size
-                logger.info(f"🎥 测试失败视频 - {test_name} - {error_msg}: {failed_video_path} (大小: {file_size} 字节)")
+                logger.info(f"测试失败视频 - {test_name} - {error_msg}: {failed_video_path} (大小: {file_size} 字节)")
                 return str(failed_video_path)
             except Exception as move_error:
                 logger.error(f"移动失败视频文件失败: {str(move_error)}")
@@ -109,7 +115,7 @@ class VideoHelper:
                     shutil.copy2(str(source_path), str(failed_video_path))
                     source_path.unlink()  # 删除原文件
                     file_size = failed_video_path.stat().st_size
-                    logger.info(f"🎥 测试失败视频 - {test_name} - {error_msg}: {failed_video_path} (大小: {file_size} 字节)")
+                    logger.info(f"测试失败视频 - {test_name} - {error_msg}: {failed_video_path} (大小: {file_size} 字节)")
                     return str(failed_video_path)
                 except Exception as copy_error:
                     logger.error(f"复制失败视频文件失败: {str(copy_error)}")
@@ -140,7 +146,7 @@ class VideoHelper:
                 if not video_file.name.startswith("failed_"):
                     try:
                         video_file.unlink()
-                        logger.info(f"🗑️ 成功测试视频已删除: {video_file}")
+                        logger.info(f"成功测试视频已删除: {video_file}")
                         deleted_count += 1
                     except Exception as delete_error:
                         # 如果删除失败，可能是文件被占用，尝试等待后再删除
@@ -148,7 +154,7 @@ class VideoHelper:
                         time.sleep(0.5)
                         try:
                             video_file.unlink()
-                            logger.info(f"🗑️ 成功测试视频已删除（重试后）: {video_file}")
+                            logger.info(f"成功测试视频已删除（重试后）: {video_file}")
                             deleted_count += 1
                         except Exception as retry_error:
                             logger.error(f"删除成功测试视频失败: {str(retry_error)}")

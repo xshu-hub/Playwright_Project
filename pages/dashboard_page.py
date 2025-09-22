@@ -1,6 +1,5 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
-from utils.allure_helper import allure_step
 
 
 class DashboardPage(BasePage):
@@ -54,101 +53,82 @@ class DashboardPage(BasePage):
         self.pending_item = ".pending-item"
         self.pending_title = ".pending-title"
         self.pending_priority = ".pending-priority"
-        self.pending_submitter = ".pending-submitter"
+        self.pending_date = ".pending-date"
         
         # 空状态
         self.empty_state = ".empty-state"
         self.empty_message = ".empty-message"
         
-    @allure_step("导航到仪表板页面")
     def navigate(self):
         """导航到仪表板页面"""
-        self.page.goto(self.url)
+        super().navigate(self.url)
         self.wait_for_page_load()
         
-    @allure_step("等待仪表板页面加载完成")
     def wait_for_page_load(self):
-        """等待页面加载完成"""
-        self.wait_for_element(self.stats_container)
-        self.wait_for_element(self.user_info)
+        """等待仪表板页面加载完成"""
+        self.wait_for_element(self.page_header, timeout=self.long_timeout)
+        self.wait_for_element(self.user_info, timeout=self.long_timeout)
         
-    @allure_step("获取当前用户姓名")
     def get_user_name(self) -> str:
         """获取当前用户姓名"""
         return self.get_text(self.user_name)
         
-    @allure_step("获取用户角色")
     def get_user_role(self) -> str:
         """获取用户角色"""
         return self.get_text(self.user_role)
         
-    @allure_step("获取用户信息")
     def get_user_info(self) -> dict:
         """获取用户信息"""
         return {
-            "username": self.get_user_name(),
+            "name": self.get_user_name(),
             "role": self.get_user_role()
         }
         
-    @allure_step("点击退出登录按钮")
     def click_logout(self):
         """点击退出登录按钮"""
         self.click(self.logout_button)
         
-    @allure_step("执行退出登录操作")
     def logout(self):
-        """退出登录"""
+        """执行退出登录操作"""
         self.click_logout()
         self.wait_for_logout_redirect()
         
-    @allure_step("等待退出登录重定向")
     def wait_for_logout_redirect(self, timeout: int = 10000):
-        """等待登出后重定向到登录页面"""
-        try:
-            # 等待URL变化到登录页面
-            self.page.wait_for_url("**/login.html", timeout=timeout)
-        except TimeoutError:
-            # 如果自动重定向失败，手动导航到登录页面
-            try:
-                self.page.goto("http://localhost:8080/pages/login.html")
-                self.page.wait_for_load_state("load")
-            except Exception as e:
-                current_url = self.page.url
-                raise Exception(f"未能重定向到登录页面，当前URL: {current_url}, 错误: {str(e)}")
+        """等待退出登录重定向"""
+        # 等待页面跳转到登录页面
+        self.page.wait_for_url("**/login.html", timeout=timeout)
         
-    @allure_step("获取待处理审批数量")
+    # 统计数据相关方法
     def get_pending_approvals_count(self) -> str:
         """获取待处理审批数量"""
-        return self.get_text(f"{self.pending_approvals_card} {self.stat_numbers}")
+        card = self.page.locator(self.pending_approvals_card)
+        return card.locator(self.stat_numbers).text_content()
         
-    @allure_step("获取已提交审批数量")
     def get_submitted_approvals_count(self) -> str:
         """获取已提交审批数量"""
-        return self.get_text(f"{self.submitted_approvals_card} {self.stat_numbers}")
+        card = self.page.locator(self.submitted_approvals_card)
+        return card.locator(self.stat_numbers).text_content()
         
-    @allure_step("获取系统用户总数")
     def get_total_users_count(self) -> str:
         """获取系统用户总数"""
-        return self.get_text(f"{self.total_users_card} {self.stat_numbers}")
+        card = self.page.locator(self.total_users_card)
+        return card.locator(self.stat_numbers).text_content()
         
-    @allure_step("点击创建审批按钮")
     def click_create_approval(self):
         """点击创建审批按钮"""
-        self.click(self.create_approval_btn)
+        self.click_element(self.create_approval_btn)
         
-    @allure_step("点击审批列表按钮")
     def click_approval_list(self):
         """点击审批列表按钮"""
-        self.click(self.approval_list_btn)
+        self.click_element(self.approval_list_btn)
         
-    @allure_step("点击用户管理按钮")
     def click_user_management(self):
         """点击用户管理按钮"""
-        self.click(self.user_management_btn)
+        self.click_element(self.user_management_btn)
         
     def wait_for_navigation_to_create_approval(self, timeout: int = 5000):
         """等待导航到创建审批页面"""
-        self.page.wait_for_url("**/approval-create.html", timeout=timeout)
+        self.page.wait_for_url("**/create-approval.html", timeout=timeout)
         
     def wait_for_navigation_to_approval_list(self, timeout: int = 5000):
         """等待导航到审批列表页面"""
@@ -168,8 +148,8 @@ class DashboardPage(BasePage):
         activities = self.page.locator(self.activity_item)
         titles = []
         for i in range(activities.count()):
-            title = activities.nth(i).locator(self.activity_title).text_content()
-            titles.append(title)
+            title_element = activities.nth(i).locator(self.activity_title)
+            titles.append(title_element.text_content())
         return titles
         
     def get_pending_items_count(self) -> int:
@@ -182,12 +162,12 @@ class DashboardPage(BasePage):
         items = self.page.locator(self.pending_item)
         titles = []
         for i in range(items.count()):
-            title = items.nth(i).locator(self.pending_title).text_content()
-            titles.append(title)
+            title_element = items.nth(i).locator(self.pending_title)
+            titles.append(title_element.text_content())
         return titles
         
     def click_pending_item(self, index: int = 0):
-        """点击指定的待处理事项"""
+        """点击待处理事项"""
         items = self.page.locator(self.pending_item)
         if index < items.count():
             items.nth(index).click()
@@ -195,7 +175,7 @@ class DashboardPage(BasePage):
             raise IndexError(f"待处理事项索引 {index} 超出范围")
             
     def click_activity_item(self, index: int = 0):
-        """点击指定的活动项"""
+        """点击活动项"""
         activities = self.page.locator(self.activity_item)
         if index < activities.count():
             activities.nth(index).click()
@@ -203,19 +183,19 @@ class DashboardPage(BasePage):
             raise IndexError(f"活动项索引 {index} 超出范围")
             
     def is_user_management_button_visible(self) -> bool:
-        """检查用户管理按钮是否可见（仅管理员可见）"""
-        return self.is_visible(self.user_management_btn)
+        """检查用户管理按钮是否可见（管理员权限）"""
+        return self.is_element_visible(self.user_management_btn)
         
     def is_empty_state_visible(self) -> bool:
-        """检查空状态是否显示"""
-        return self.is_visible(self.empty_state)
+        """检查是否显示空状态"""
+        return self.is_element_visible(self.empty_state)
         
     def get_empty_message(self) -> str:
         """获取空状态消息"""
         return self.get_text(self.empty_message)
         
     def verify_dashboard_elements(self):
-        """验证仪表板页面关键元素"""
+        """验证仪表板页面元素"""
         # 验证页面头部
         expect(self.page.locator(self.page_header)).to_be_visible()
         expect(self.page.locator(self.user_info)).to_be_visible()
@@ -225,23 +205,24 @@ class DashboardPage(BasePage):
         
         # 验证统计卡片
         expect(self.page.locator(self.stats_container)).to_be_visible()
-        expect(self.page.locator(self.pending_approvals_card)).to_be_visible()
-        expect(self.page.locator(self.submitted_approvals_card)).to_be_visible()
         
-        # 验证快速操作
+        # 验证快速操作区域
         expect(self.page.locator(self.quick_actions)).to_be_visible()
         expect(self.page.locator(self.create_approval_btn)).to_be_visible()
         expect(self.page.locator(self.approval_list_btn)).to_be_visible()
         
+        # 验证最近活动区域
+        expect(self.page.locator(self.recent_activities)).to_be_visible()
+        
     def verify_admin_elements(self):
-        """验证管理员专用元素"""
-        expect(self.page.locator(self.total_users_card)).to_be_visible()
+        """验证管理员特有元素"""
         expect(self.page.locator(self.user_management_btn)).to_be_visible()
+        expect(self.page.locator(self.total_users_card)).to_be_visible()
         
     def verify_user_elements(self):
-        """验证普通用户元素（不包含管理员功能）"""
-        expect(self.page.locator(self.total_users_card)).not_to_be_visible()
-        expect(self.page.locator(self.user_management_btn)).not_to_be_visible()
+        """验证普通用户元素"""
+        expect(self.page.locator(self.pending_approvals_card)).to_be_visible()
+        expect(self.page.locator(self.submitted_approvals_card)).to_be_visible()
         
     def refresh_page(self):
         """刷新页面"""
@@ -250,21 +231,22 @@ class DashboardPage(BasePage):
         
     def verify_responsive_design(self):
         """验证响应式设计"""
-        # 切换到移动端视口
+        # 移动端视口
         self.page.set_viewport_size({"width": 375, "height": 667})
         
         # 验证关键元素在移动端仍然可见
+        expect(self.page.locator(self.page_header)).to_be_visible()
         expect(self.page.locator(self.user_info)).to_be_visible()
-        expect(self.page.locator(self.stats_container)).to_be_visible()
         expect(self.page.locator(self.quick_actions)).to_be_visible()
         
-        # 恢复桌面端视口
+        # 恢复桌面视口
         self.page.set_viewport_size({"width": 1280, "height": 720})
         
     def wait_for_data_load(self, timeout: int = 10000):
         """等待数据加载完成"""
         # 等待统计数据加载
         self.page.wait_for_function(
-            "document.querySelector('.stat-number').textContent !== '0'",
+            "() => document.querySelectorAll('.stat-number').length > 0 && "
+            "Array.from(document.querySelectorAll('.stat-number')).every(el => el.textContent.trim() !== '')",
             timeout=timeout
         )

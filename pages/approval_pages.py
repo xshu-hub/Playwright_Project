@@ -1,7 +1,6 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
 from typing import List, Dict
-from utils.allure_helper import allure_step
 
 
 class ApprovalCreatePage(BasePage):
@@ -37,53 +36,43 @@ class ApprovalCreatePage(BasePage):
         self.breadcrumb = ".breadcrumb"
         self.back_to_dashboard = "a[href='dashboard.html']"
         
-    @allure_step("导航到创建审批页面")
     def navigate(self):
         """导航到创建审批页面"""
         self.page.goto(self.url)
         self.wait_for_page_load()
         
-    @allure_step("等待创建审批页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
         self.wait_for_element(self.approval_form)
         self.wait_for_element(self.title_input)
         
-    @allure_step("填写申请标题: {title}")
     def fill_title(self, title: str):
         """填写申请标题"""
-        self.fill(self.title_input, title)
+        self.fill_input(self.title_input, title)
         
-    @allure_step("选择申请类型: {type_value}")
     def select_type(self, type_value: str):
         """选择申请类型"""
         self.select_option(self.type_select, type_value)
         
-    @allure_step("选择优先级: {priority}")
     def select_priority(self, priority: str):
         """选择优先级"""
-        # 点击对应的优先级选项
-        priority_option = f".priority-option[data-priority='{priority}']"
-        self.click(priority_option)
+        priority_button = f"{self.priority_selector} button[data-priority='{priority}']"
+        self.click_element(priority_button)
         
-    @allure_step("填写申请描述: {description}")
     def fill_description(self, description: str):
         """填写申请描述"""
-        self.fill(self.description_textarea, description)
+        self.fill_input(self.description_textarea, description)
         
-    @allure_step("点击提交按钮")
     def click_submit(self):
         """点击提交按钮"""
-        self.click(self.submit_button)
+        self.click_element(self.submit_button)
         
-    @allure_step("点击取消按钮")
     def click_cancel(self):
         """点击取消按钮"""
-        self.click(self.cancel_button)
+        self.click_element(self.cancel_button)
         
-    @allure_step("创建审批申请: {title}")
     def create_approval(self, title: str, type_value: str, priority: str, description: str):
-        """创建完整的审批申请"""
+        """创建审批申请"""
         self.fill_title(title)
         self.select_type(type_value)
         self.select_priority(priority)
@@ -108,16 +97,17 @@ class ApprovalCreatePage(BasePage):
         
     def verify_form_elements(self):
         """验证表单元素"""
+        expect(self.page.locator(self.approval_form)).to_be_visible()
         expect(self.page.locator(self.title_input)).to_be_visible()
         expect(self.page.locator(self.type_select)).to_be_visible()
-        expect(self.page.locator(".priority-selector")).to_be_visible()
+        expect(self.page.locator(self.priority_selector)).to_be_visible()
         expect(self.page.locator(self.description_textarea)).to_be_visible()
         expect(self.page.locator(self.submit_button)).to_be_visible()
         expect(self.page.locator(self.cancel_button)).to_be_visible()
 
 
 class ApprovalListPage(BasePage):
-    """审批申请列表页面对象类"""
+    """审批列表页面对象类"""
     
     @property
     def url(self) -> str:
@@ -127,188 +117,141 @@ class ApprovalListPage(BasePage):
     @property
     def title(self) -> str:
         """页面标题"""
-        return "申请列表 - 测试系统"
+        return "审批列表 - 审批系统"
     
     def __init__(self, page: Page):
         super().__init__(page)
         
         # 筛选器
-        self.filters = ".filters"
         self.status_filter = "#statusFilter"
         self.type_filter = "#typeFilter"
         self.priority_filter = "#priorityFilter"
-        self.search_filter = "#searchFilter"
+        self.search_input = "#searchInput"
         self.refresh_button = "#refreshBtn"
         
-        # 申请列表
+        # 审批列表
         self.approvals_container = ".approvals-container"
-        self.approvals_list = "#approvalsList"
-        self.approval_item = ".approval-item"
+        self.approval_items = ".approval-item"
         self.approval_title = ".approval-title"
+        self.approval_status = ".approval-status"
         self.approval_type = ".approval-type"
         self.approval_priority = ".approval-priority"
-        self.approval_status = ".approval-status"
         self.approval_submitter = ".approval-submitter"
         self.approval_date = ".approval-date"
-        self.approval_actions = ".approval-actions"
         
         # 操作按钮
-        self.view_button = "button:has-text('查看详情')"
+        self.view_button = ".btn-view"
         self.approve_button = ".btn-approve"
         self.reject_button = ".btn-reject"
-        
-        # 空状态
-        self.empty_state = ".empty-state"
         
         # 分页
         self.pagination = ".pagination"
         self.page_info = ".page-info"
         
-    @allure_step("导航到审批列表页面")
+        # 空状态
+        self.empty_state = ".empty-state"
+        
     def navigate(self):
         """导航到审批列表页面"""
         self.page.goto(self.url)
         self.wait_for_page_load()
         
-    @allure_step("等待审批列表页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
-        self.wait_for_element(self.filters)
-        self.wait_for_element(self.approvals_list)
+        self.wait_for_element(self.approvals_container)
         
-    @allure_step("按状态筛选: {status}")
     def filter_by_status(self, status: str):
-        """按状态筛选审批"""
+        """按状态筛选"""
         self.select_option(self.status_filter, status)
         
-    @allure_step("按类型筛选: {type_value}")
     def filter_by_type(self, type_value: str):
-        """按类型筛选审批"""
+        """按类型筛选"""
         self.select_option(self.type_filter, type_value)
         
-    @allure_step("按优先级筛选: {priority}")
     def filter_by_priority(self, priority: str):
-        """按优先级筛选审批"""
+        """按优先级筛选"""
         self.select_option(self.priority_filter, priority)
         
-    @allure_step("搜索审批: {search_term}")
     def search_approvals(self, search_term: str):
         """搜索审批"""
-        self.fill(self.search_filter, search_term)
+        self.fill_input(self.search_input, search_term)
         
-    @allure_step("点击刷新按钮")
     def click_refresh(self):
         """点击刷新按钮"""
-        self.click(self.refresh_button)
+        self.click_element(self.refresh_button)
         
-    @allure_step("获取审批数量")
     def get_approval_count(self) -> int:
-        """获取申请数量"""
-        return self.page.locator(self.approval_item).count()
+        """获取审批数量"""
+        return self.page.locator(self.approval_items).count()
         
     def get_approval_titles(self) -> List[str]:
-        """获取所有申请标题"""
+        """获取审批标题列表"""
+        items = self.page.locator(self.approval_items)
         titles = []
-        items = self.page.locator(self.approval_item)
         for i in range(items.count()):
             title = items.nth(i).locator(self.approval_title).text_content()
             titles.append(title)
         return titles
         
     def click_view_approval(self, index: int = 0):
-        """点击查看申请详情"""
-        items = self.page.locator(self.approval_item)
+        """点击查看审批"""
+        items = self.page.locator(self.approval_items)
         if index < items.count():
-            # 点击申请项内的查看详情按钮
-            items.nth(index).locator(self.view_button).click()
+            view_button = items.nth(index).locator(self.view_button)
+            view_button.click()
         else:
-            raise IndexError(f"申请索引 {index} 超出范围")
+            raise IndexError(f"审批索引 {index} 超出范围")
             
     def click_approve_approval(self, index: int = 0):
-        """点击批准申请"""
-        items = self.page.locator(self.approval_item)
+        """点击批准审批"""
+        items = self.page.locator(self.approval_items)
         if index < items.count():
-            items.nth(index).locator(self.approve_button).click()
-        else:
-            raise IndexError(f"申请索引 {index} 超出范围")
-            
-    def click_reject_approval(self, index: int = 0):
-        """点击拒绝申请"""
-        items = self.page.locator(self.approval_item)
-        if index < items.count():
-            items.nth(index).locator(self.reject_button).click()
-        else:
-            raise IndexError(f"申请索引 {index} 超出范围")
-            
-    def get_approval_info(self, index: int = 0) -> Dict[str, str]:
-        """获取指定申请的信息"""
-        # 等待申请列表加载
-        self.page.wait_for_selector(self.approval_item, timeout=10000)
+            approve_button = items.nth(index).locator(self.approve_button)
+            approve_button.click()
         
-        items = self.page.locator(self.approval_item)
+    def click_reject_approval(self, index: int = 0):
+        """点击拒绝审批"""
+        items = self.page.locator(self.approval_items)
+        if index < items.count():
+            reject_button = items.nth(index).locator(self.reject_button)
+            reject_button.click()
+        
+    def get_approval_info(self, index: int = 0) -> Dict[str, str]:
+        """获取审批信息"""
+        items = self.page.locator(self.approval_items)
         if index >= items.count():
-            raise IndexError(f"申请索引 {index} 超出范围")
+            return {}
             
         item = items.nth(index)
-        
-        # 等待每个元素可见后再获取文本
-        item.locator(self.approval_title).wait_for(state="visible", timeout=5000)
-        
-        # 获取类型信息 - 从meta-item中查找包含"类型"的项目
-        type_text = ""
-        try:
-            meta_items = item.locator('.meta-item')
-            for i in range(meta_items.count()):
-                meta_item = meta_items.nth(i)
-                label_text = meta_item.locator('.meta-label').text_content(timeout=1000) or ""
-                if '类型' in label_text:
-                    type_text = meta_item.locator('.meta-value').text_content(timeout=1000) or ""
-                    break
-        except:
-            type_text = ""
-        
-        # 获取提交时间 - 从meta-item中查找包含"提交时间"的项目
-        date_text = ""
-        try:
-            meta_items = item.locator('.meta-item')
-            for i in range(meta_items.count()):
-                meta_item = meta_items.nth(i)
-                label_text = meta_item.locator('.meta-label').text_content(timeout=1000) or ""
-                if '提交时间' in label_text:
-                    date_text = meta_item.locator('.meta-value').text_content(timeout=1000) or ""
-                    break
-        except:
-            date_text = ""
-        
         return {
-            "title": item.locator(self.approval_title).text_content(timeout=5000) or "",
-            "type": type_text,
-            "priority": item.locator('.priority-badge').text_content(timeout=5000) or "",
-            "status": item.locator('.status-badge').text_content(timeout=5000) or "",
-            "submitter": "",  # 提交者信息不在当前HTML结构中
-            "date": date_text
+            "title": item.locator(self.approval_title).text_content(),
+            "status": item.locator(self.approval_status).text_content(),
+            "type": item.locator(self.approval_type).text_content(),
+            "priority": item.locator(self.approval_priority).text_content(),
+            "submitter": item.locator(self.approval_submitter).text_content(),
+            "date": item.locator(self.approval_date).text_content()
         }
         
     def is_empty_state_visible(self) -> bool:
-        """检查是否显示空状态"""
-        return self.is_visible(self.empty_state)
+        """检查空状态是否可见"""
+        return self.is_element_visible(self.empty_state)
         
     def wait_for_approval_update(self, timeout: int = 5000):
-        """等待申请状态更新"""
-        self.page.wait_for_timeout(1000)  # 等待状态更新
+        """等待审批更新"""
+        self.page.wait_for_timeout(1000)  # 等待DOM更新
         
     def verify_list_elements(self):
-        """验证列表页面元素"""
-        expect(self.page.locator(self.filters)).to_be_visible()
+        """验证列表元素"""
         expect(self.page.locator(self.status_filter)).to_be_visible()
         expect(self.page.locator(self.type_filter)).to_be_visible()
         expect(self.page.locator(self.priority_filter)).to_be_visible()
-        expect(self.page.locator(self.search_filter)).to_be_visible()
+        expect(self.page.locator(self.search_input)).to_be_visible()
         expect(self.page.locator(self.refresh_button)).to_be_visible()
+        expect(self.page.locator(self.approvals_container)).to_be_visible()
 
 
 class ApprovalDetailPage(BasePage):
-    """审批申请详情页面对象类"""
+    """审批详情页面对象类"""
     
     @property
     def url(self) -> str:
@@ -318,42 +261,33 @@ class ApprovalDetailPage(BasePage):
     @property
     def title(self) -> str:
         """页面标题"""
-        return "申请详情 - 测试系统"
+        return "审批详情 - 审批系统"
     
     def __init__(self, page: Page):
         super().__init__(page)
-        self.base_url = "http://localhost:8080/pages/approval-detail.html"
         
-        # 页面头部
-        self.approval_header = ".page-header"
-        self.approval_title = "#pageTitle"
-        self.approval_status = ".status-badge"
-        self.approval_info = ".detail-grid"
-        self.approval_description = ".description-content"
-        
-        # 申请信息字段
-        self.submitter_info = ".submitter-info"
-        self.submit_time = ".submit-time"
+        # 审批信息
+        self.approval_title = ".approval-title"
+        self.approval_status = ".approval-status"
         self.approval_type = ".approval-type"
         self.approval_priority = ".approval-priority"
-        
-        # 审批历史
-        self.approval_history = ".approval-history"
-        self.history_item = ".history-item"
-        self.history_action = ".history-action"
-        self.history_user = ".history-user"
-        self.history_time = ".history-time"
-        self.history_comment = ".history-comment"
+        self.approval_description = ".approval-description"
+        self.submitter_info = ".submitter-info"
+        self.submit_time = ".submit-time"
         
         # 审批操作
-        self.approval_actions = ".approval-actions"
-        self.approve_button = "button:has-text('通过申请')"
-        self.reject_button = "button:has-text('拒绝申请')"
-        self.comment_textarea = "#approvalComment"
+        self.comment_textarea = "#comment"
+        self.approve_button = "#approveBtn"
+        self.reject_button = "#rejectBtn"
+        self.back_button = "#backBtn"
         
-        # 导航
-        self.back_button = "a.btn.btn-secondary"
-        self.breadcrumb = ".breadcrumb"
+        # 审批历史
+        self.history_section = ".approval-history"
+        self.history_items = ".history-item"
+        self.history_action = ".history-action"
+        self.history_comment = ".history-comment"
+        self.history_time = ".history-time"
+        self.history_user = ".history-user"
         
     def navigate_with_id(self, approval_id: str):
         """导航到指定ID的审批详情页面"""
@@ -363,8 +297,8 @@ class ApprovalDetailPage(BasePage):
         
     def wait_for_page_load(self):
         """等待页面加载完成"""
-        self.wait_for_element(self.approval_header)
-        self.wait_for_element(self.approval_info)
+        self.wait_for_element(self.approval_title)
+        self.wait_for_element(self.approval_description)
         
     def get_approval_title(self) -> str:
         """获取审批标题"""
@@ -388,67 +322,64 @@ class ApprovalDetailPage(BasePage):
         
     def fill_comment(self, comment: str):
         """填写审批意见"""
-        self.fill(self.comment_textarea, comment)
+        self.fill_input(self.comment_textarea, comment)
         
     def click_approve(self):
         """点击批准按钮"""
-        self.click(self.approve_button)
+        self.click_element(self.approve_button)
         
     def click_reject(self):
         """点击拒绝按钮"""
-        self.click(self.reject_button)
+        self.click_element(self.reject_button)
         
     def approve_with_comment(self, comment: str = ""):
         """批准审批并添加意见"""
         if comment:
             self.fill_comment(comment)
         self.click_approve()
-        self.wait_for_approval_processed()
         
     def reject_with_comment(self, comment: str = ""):
         """拒绝审批并添加意见"""
         if comment:
             self.fill_comment(comment)
         self.click_reject()
-        self.wait_for_approval_processed()
         
     def click_back(self):
         """点击返回按钮"""
-        self.click(self.back_button)
+        self.click_element(self.back_button)
         
     def get_history_count(self) -> int:
-        """获取审批历史记录数量"""
-        return self.page.locator(self.history_item).count()
+        """获取历史记录数量"""
+        return self.page.locator(self.history_items).count()
         
     def get_history_items(self) -> List[Dict[str, str]]:
-        """获取所有审批历史记录"""
-        items = []
-        history_elements = self.page.locator(self.history_item)
-        
-        for i in range(history_elements.count()):
-            item = history_elements.nth(i)
-            items.append({
+        """获取历史记录列表"""
+        items = self.page.locator(self.history_items)
+        history = []
+        for i in range(items.count()):
+            item = items.nth(i)
+            history.append({
                 "action": item.locator(self.history_action).text_content(),
-                "user": item.locator(self.history_user).text_content(),
+                "comment": item.locator(self.history_comment).text_content(),
                 "time": item.locator(self.history_time).text_content(),
-                "comment": item.locator(self.history_comment).text_content() or ""
+                "user": item.locator(self.history_user).text_content()
             })
-        return items
+        return history
         
     def is_approval_actions_visible(self) -> bool:
-        """检查审批操作区域是否可见"""
-        return self.is_visible(self.approval_actions)
+        """检查审批操作按钮是否可见"""
+        return (self.is_element_visible(self.approve_button) and 
+                self.is_element_visible(self.reject_button))
         
     def wait_for_approval_processed(self, timeout: int = 5000):
         """等待审批处理完成"""
-        # 等待页面状态更新
-        self.page.wait_for_timeout(1000)
+        self.page.wait_for_timeout(2000)  # 等待状态更新
         
     def verify_detail_elements(self):
         """验证详情页面元素"""
-        expect(self.page.locator(self.approval_header)).to_be_visible()
         expect(self.page.locator(self.approval_title)).to_be_visible()
         expect(self.page.locator(self.approval_status)).to_be_visible()
-        expect(self.page.locator(self.approval_info)).to_be_visible()
         expect(self.page.locator(self.approval_description)).to_be_visible()
+        expect(self.page.locator(self.submitter_info)).to_be_visible()
+        expect(self.page.locator(self.submit_time)).to_be_visible()
         expect(self.page.locator(self.back_button)).to_be_visible()

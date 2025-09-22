@@ -1,7 +1,6 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
 from typing import List, Dict, Optional, Literal, Union
-from utils.allure_helper import allure_step
 
 
 class UserManagementPage(BasePage):
@@ -49,7 +48,7 @@ class UserManagementPage(BasePage):
         self.user_actions = ".user-actions"
         self.edit_user_button = ".btn-sm:has-text('编辑')"
         self.delete_user_button = ".btn-sm:has-text('删除')"
-        self.toggle_status_button = ".btn-sm:has-text('禁用'), .btn-sm:has-text('启用')"
+        self.toggle_status_button = ".btn-sm:has-text('启用'), .btn-sm:has-text('禁用')"
         
         # 模态框
         self.user_modal = "#userModal"
@@ -70,45 +69,37 @@ class UserManagementPage(BasePage):
         # 空状态
         self.empty_state = ".empty-state"
         
-    @allure_step("导航到用户管理页面")
     def navigate(self, url: Optional[str] = None, wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"] = "domcontentloaded") -> 'BasePage':
         """导航到用户管理页面"""
-        return super().navigate(url, wait_until)
+        return super().navigate(url or self.url, wait_until)
         
-    @allure_step("等待用户管理页面加载完成")
     def wait_for_page_load(self, timeout: Optional[int] = None) -> None:
         """等待页面加载完成"""
         super().wait_for_page_load(timeout)
         self.wait_for_element(self.page_header)
         self.wait_for_element(self.users_container)
         
-    @allure_step("点击添加用户按钮")
     def click_add_user(self):
         """点击添加用户按钮"""
         self.click(self.add_user_button)
         self.wait_for_element(self.user_modal)
         
-    @allure_step("搜索用户: {search_term}")
     def search_users(self, search_term: str):
         """搜索用户"""
         self.fill(self.search_filter, search_term)
         
-    @allure_step("按角色筛选: {role}")
     def filter_by_role(self, role: str):
         """按角色筛选用户"""
         self.select_option(self.role_filter, role)
         
-    @allure_step("按状态筛选: {status}")
     def filter_by_status(self, status: str):
         """按状态筛选用户"""
         self.select_option(self.status_filter, status)
         
-    @allure_step("点击刷新按钮")
     def click_refresh(self):
         """点击刷新按钮"""
         self.click(self.refresh_button)
         
-    @allure_step("获取用户总数")
     def get_user_count(self) -> int:
         """获取用户数量"""
         return self.page.locator(self.user_row).count()
@@ -164,7 +155,6 @@ class UserManagementPage(BasePage):
         else:
             raise IndexError(f"用户索引 {index} 超出范围")
             
-    @allure_step("填写用户表单: 姓名={name}, 用户名={username}, 邮箱={email}, 角色={role}")
     def fill_user_form(self, name: str, username: str, email: str, password: str = "", role: str = "user", status: str = "active"):
         """填写用户表单"""
         self.fill(self.name_input, name)
@@ -175,26 +165,22 @@ class UserManagementPage(BasePage):
         self.select_option(self.role_select, role)
         self.select_option(self.status_select, status)
         
-    @allure_step("点击保存用户")
     def click_save_user(self):
-        """点击保存用户按钮"""
+        """点击保存用户"""
         self.click(self.save_user_button)
         
-    @allure_step("取消用户表单")
     def click_cancel_user_form(self):
-        """点击取消按钮"""
-        self.click(self.close_modal_button)
+        """取消用户表单"""
+        self.click(self.cancel_button)
         
-    @allure_step("创建新用户: {name} ({username})")
     def create_user(self, name: str, username: str, email: str, password: str, role: str = "user", status: str = "active"):
         """创建新用户"""
         self.click_add_user()
         self.fill_user_form(name, username, email, password, role, status)
         self.click_save_user()
         
-    @allure_step("编辑用户 (索引: {index})")
     def edit_user(self, index: int, name: Optional[str] = None, username: Optional[str] = None, email: Optional[str] = None, password: Optional[str] = None, role: Optional[str] = None, status: Optional[str] = None):
-        """编辑用户信息"""
+        """编辑用户"""
         self.click_edit_user(index)
         
         if name is not None:
@@ -225,7 +211,6 @@ class UserManagementPage(BasePage):
         self.click_delete_user(index)
         self.confirm_delete_user()
         
-    @allure_step("关闭模态框")
     def close_modal(self):
         """关闭模态框"""
         self.click(self.close_modal_button)

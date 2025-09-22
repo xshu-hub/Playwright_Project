@@ -30,7 +30,6 @@ class EnvironmentConfig(BaseModel):
     slow_mo: int = Field(default=0, description="慢动作延迟(毫秒)")
     video_record: bool = Field(default=False, description="是否录制视频")
     screenshot_on_failure: bool = Field(default=True, description="失败时是否截图")
-    parallel_workers: int = Field(default=4, description="并行工作进程数")
     retry_times: int = Field(default=2, description="重试次数")
     
     class Config:
@@ -107,7 +106,6 @@ class ConfigManager:
                 'slow_mo': 0,
                 'video_record': False,
                 'screenshot_on_failure': True,
-                'parallel_workers': 4,
                 'retry_times': 2
             }
         
@@ -120,7 +118,6 @@ class ConfigManager:
             'browser_timeout': lambda x: isinstance(x, int) and x > 0,
             'navigation_timeout': lambda x: isinstance(x, int) and x > 0,
             'element_timeout': lambda x: isinstance(x, int) and x > 0,
-            'parallel_workers': lambda x: isinstance(x, int) and 1 <= x <= 16,
             'retry_times': lambda x: isinstance(x, int) and x >= 0,
             'slow_mo': lambda x: isinstance(x, int) and x >= 0,
         }
@@ -206,10 +203,6 @@ class ConfigManager:
     def should_screenshot_on_failure(self) -> bool:
         """失败时是否截图"""
         return self._config.screenshot_on_failure
-
-    def get_parallel_workers(self) -> int:
-        """获取并行工作进程数"""
-        return self._config.parallel_workers
 
     def get_retry_times(self) -> int:
         """获取重试次数"""

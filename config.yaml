@@ -11,11 +11,10 @@ environments:
     browser_timeout: 30000        # 浏览器超时时间(毫秒)
     navigation_timeout: 60000     # 页面导航超时时间(毫秒)
     element_timeout: 10000        # 元素操作超时时间(毫秒)
-    headless: false                # 是否无头模式
+    headless: true                # 是否无头模式
     slow_mo: 0                    # 慢动作延迟(毫秒)
     video_record: true            # 是否录制视频
     screenshot_on_failure: true   # 失败时是否截图
-    parallel_workers: 4           # 并行工作进程数
     retry_times: 2                # 重试次数
 
   prod:
@@ -27,7 +26,6 @@ environments:
     slow_mo: 0
     video_record: false
     screenshot_on_failure: true
-    parallel_workers: 8
     retry_times: 3
 
   dev:
@@ -39,7 +37,6 @@ environments:
     slow_mo: 100                  # 开发时慢速执行
     video_record: false
     screenshot_on_failure: true
-    parallel_workers: 2
     retry_times: 1
 
 # 浏览器配置

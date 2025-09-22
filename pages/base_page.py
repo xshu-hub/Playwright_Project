@@ -32,12 +32,8 @@ class BasePage(ABC):
         """
         self.page = page
         
-        # 获取当前会话目录
-        import os
-        session_dir = os.environ.get('PYTEST_SESSION_DIR', 'reports')
-        
-        # 使用会话目录创建ScreenshotHelper实例
-        self.screenshot_helper = ScreenshotHelper(page, f"{session_dir}/screenshots")
+        # 使用固定的reports目录创建ScreenshotHelper实例
+        self.screenshot_helper = ScreenshotHelper(page, "reports/screenshots")
         self.timeout = 10000  # 默认超时时间 10 秒
         self.short_timeout = 3000  # 短超时时间 3 秒
         self.long_timeout = 30000  # 长超时时间 30 秒
@@ -71,10 +67,18 @@ class BasePage(ABC):
         try:
             self.page.goto(target_url, wait_until=wait_until, timeout=self.long_timeout)
             self.wait_for_page_load()
-            logger.info(f"🌐 页面导航成功: {target_url}")
+            logger.info(f"页面导航成功: {target_url}")
             return self
         except Exception as e:
-            logger.error(f"❌ 页面导航失败: {target_url} | 错误: {str(e)}")
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'target_url': target_url,
+                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown',
+                'wait_until': wait_until,
+                'timeout': self.long_timeout
+            }
+            logger.error(f"页面导航失败 [NAV_001] | 目标URL: {target_url} | 当前URL: {error_details['current_url']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 等待条件: {wait_until} | 超时设置: {self.long_timeout}ms")
             self.screenshot_helper.take_failure_screenshot("navigation_failed", str(e))
             raise
     
@@ -127,7 +131,14 @@ class BasePage(ABC):
             return element
         except Exception as e:
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-            logger.error(f"获取元素失败: {selector_desc}, 错误: {str(e)}")
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'selector': selector_desc,
+                'timeout': timeout,
+                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown'
+            }
+            logger.error(f"获取元素失败 [ELE_001] | 选择器: {selector_desc} | 当前URL: {error_details['current_url']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 超时设置: {timeout}ms")
             raise
     
     def click(self, selector: SelectorType, timeout: Optional[int] = None, force: bool = False) -> 'BasePage':
@@ -149,10 +160,19 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.click(force=force, timeout=timeout)
-            logger.info(f"🖱️ 元素点击成功: {selector_desc}")
+            logger.info(f"元素点击成功: {selector_desc}")
             return self
         except Exception as e:
-            logger.error(f"❌ 元素点击失败: {selector_desc} | 错误: {str(e)}")
+            selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'selector': selector_desc,
+                'timeout': timeout,
+                'force': force,
+                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown'
+            }
+            logger.error(f"元素点击失败 [CLK_001] | 选择器: {selector_desc} | 当前URL: {error_details['current_url']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 强制点击: {force} | 超时设置: {timeout}ms")
             self.screenshot_helper.take_failure_screenshot("click_failed", str(e))
             raise
     
@@ -174,10 +194,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.dblclick(timeout=timeout)
-            logger.info(f"🖱️ 元素双击成功: {selector_desc}")
+            logger.info(f"元素双击成功: {selector_desc}")
             return self
         except Exception as e:
-            logger.error(f"❌ 元素双击失败: {selector_desc} | 错误: {str(e)}")
+            logger.error(f"元素双击失败: {selector_desc} | 错误: {str(e)}")
             raise
     
     def fill(self, selector: SelectorType, value: str, timeout: Optional[int] = None, clear: bool = True) -> 'BasePage':
@@ -202,10 +222,20 @@ class BasePage(ABC):
             if clear:
                 element.clear(timeout=timeout)
             element.fill(value, timeout=timeout)
-            logger.info(f"✏️ 元素填充成功: {selector_desc} = '{value}'")
+            logger.info(f"元素填充成功: {selector_desc} = '{value}'")
             return self
         except Exception as e:
-            logger.error(f"❌ 元素填充失败: {selector_desc} = '{value}' | 错误: {str(e)}")
+            selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'selector': selector_desc,
+                'value': value,
+                'clear_first': clear_first,
+                'timeout': timeout,
+                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown'
+            }
+            logger.error(f"元素填充失败 [FIL_001] | 选择器: {selector_desc} | 填充值: '{value}' | 当前URL: {error_details['current_url']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 清空后填充: {clear_first} | 超时设置: {timeout}ms")
             raise
     
     def type_text(self, selector: SelectorType, text: str, delay: int = 100, timeout: Optional[int] = None) -> 'BasePage':
@@ -228,10 +258,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.type(text, delay=delay, timeout=timeout)
-            logger.info(f"⌨️ 文本输入成功: {selector_desc} = '{text}'")
+            logger.info(f"文本输入成功: {selector_desc} = '{text}'")
             return self
         except Exception as e:
-            logger.error(f"❌ 文本输入失败: {selector_desc} = '{text}' | 错误: {str(e)}")
+            logger.error(f"文本输入失败: {selector_desc} = '{text}' | 错误: {str(e)}")
             raise
     
     def select_option(self, selector: SelectorType, value: Union[str, List[str]], timeout: Optional[int] = None) -> 'BasePage':
@@ -253,10 +283,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.select_option(value, timeout=timeout)
-            logger.info(f"📋 选项选择成功: {selector_desc} = '{value}'")
+            logger.info(f"选项选择成功: {selector_desc} = '{value}'")
             return self
         except Exception as e:
-            logger.error(f"❌ 选项选择失败: {selector_desc} = '{value}' | 错误: {str(e)}")
+            logger.error(f"选项选择失败: {selector_desc} = '{value}' | 错误: {str(e)}")
             raise
     
     def check(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
@@ -277,10 +307,10 @@ class BasePage(ABC):
         try:
             element = self.get_element(selector, timeout)
             element.check(timeout=timeout)
-            logger.info(f"☑️ 复选框勾选成功: {selector_desc}")
+            logger.info(f"复选框勾选成功: {selector_desc}")
             return self
         except Exception as e:
-            logger.error(f"❌ 复选框勾选失败: {selector_desc} | 错误: {str(e)}")
+            logger.error(f"复选框勾选失败: {selector_desc} | 错误: {str(e)}")
             raise
     
     def uncheck(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
@@ -304,7 +334,7 @@ class BasePage(ABC):
             logger.info(f"☐ 复选框取消勾选成功: {selector_desc}")
             return self
         except Exception as e:
-            logger.error(f"❌ 复选框取消勾选失败: {selector_desc} | 错误: {str(e)}")
+            logger.error(f"复选框取消勾选失败: {selector_desc} | 错误: {str(e)}")
             raise
     
     def hover(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
@@ -328,7 +358,7 @@ class BasePage(ABC):
             logger.info(f"👆 元素悬停成功: {selector_desc}")
             return self
         except Exception as e:
-            logger.error(f"❌ 元素悬停失败: {selector_desc} | 错误: {str(e)}")
+            logger.error(f"元素悬停失败: {selector_desc} | 错误: {str(e)}")
             raise
     
     def scroll_to(self, selector: Optional[SelectorType] = None, x: Optional[int] = None, y: Optional[int] = None) -> 'BasePage':
@@ -378,7 +408,15 @@ class BasePage(ABC):
             return element
         except Exception as e:
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-            logger.error(f"等待元素失败: {selector_desc}, 状态: {state}, 错误: {str(e)}")
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'selector': selector_desc,
+                'state': state,
+                'timeout': timeout,
+                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown'
+            }
+            logger.error(f"等待元素失败 [WAI_001] | 选择器: {selector_desc} | 等待状态: {state} | 当前URL: {error_details['current_url']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 超时设置: {timeout}ms")
             raise
     
     def wait_for_element_stable(self, selector: SelectorType, stable_time: int = 500, timeout: Optional[int] = None) -> Locator:
@@ -470,7 +508,7 @@ class BasePage(ABC):
             return text or ""
         except Exception as e:
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-            logger.error(f"❌ 元素文本获取失败: {selector_desc} | 错误: {str(e)}")
+            logger.error(f"元素文本获取失败: {selector_desc} | 错误: {str(e)}")
             raise
     
     def get_attribute(self, selector: SelectorType, attribute: str, timeout: Optional[int] = None) -> Optional[str]:
@@ -490,11 +528,11 @@ class BasePage(ABC):
             element = self.get_element(selector, timeout)
             value = element.get_attribute(attribute)
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-            logger.info(f"🏷️ 元素属性获取成功: {selector_desc}[{attribute}] = '{value}'")
+            logger.info(f"元素属性获取成功: {selector_desc}[{attribute}] = '{value}'")
             return value
         except Exception as e:
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-            logger.error(f"❌ 元素属性获取失败: {selector_desc}[{attribute}] | 错误: {str(e)}")
+            logger.error(f"元素属性获取失败: {selector_desc}[{attribute}] | 错误: {str(e)}")
             raise
     
     def is_visible(self, selector: SelectorType, timeout: Optional[int] = None) -> bool:
@@ -577,7 +615,7 @@ class BasePage(ABC):
         logger_config.log_page_action("返回上一页")
         try:
             self.page.go_back(wait_until="domcontentloaded", timeout=self.long_timeout)
-            logger.info("⬅️ 返回上一页成功")
+            logger.info("返回上一页成功")
             return self
         except Exception as e:
             logger.error(f"返回上一页失败: {str(e)}")
@@ -593,7 +631,7 @@ class BasePage(ABC):
         logger_config.log_page_action("前进到下一页")
         try:
             self.page.go_forward(wait_until="domcontentloaded", timeout=self.long_timeout)
-            logger.info("➡️ 前进到下一页成功")
+            logger.info("前进到下一页成功")
             return self
         except Exception as e:
             logger.error(f"前进到下一页失败: {str(e)}")

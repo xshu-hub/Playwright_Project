@@ -102,12 +102,21 @@ class ScreenshotHelper:
             
             # 记录日志
             desc_str = f" - {description}" if description else ""
-            logger.info(f"📸 截图已保存: {file_path}{desc_str} (质量: {quality})")
+            logger.info(f"截图已保存: {file_path}{desc_str} (质量: {quality})")
             
             return str(file_path)
             
         except Exception as e:
-            logger.error(f"截图失败: {str(e)}")
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'page_url': self.page.url if self.page else 'Unknown',
+                'filename': filename or 'auto-generated',
+                'full_page': full_page,
+                'quality': quality,
+                'base_path': str(self.base_path)
+            }
+            logger.error(f"截图失败 [SCR_002] | 页面URL: {error_details['page_url']} | 文件名: {error_details['filename']} | 全页截图: {error_details['full_page']} | 质量: {error_details['quality']} | 错误类型: {error_details['error_type']} | 错误信息: {error_details['error_message']} | 保存路径: {error_details['base_path']}")
             return None
     
     def take_failure_screenshot(self, test_name: str, error_msg: str = "") -> Optional[str]:
