@@ -230,8 +230,9 @@ class BaseTest(unittest.TestCase):
         """测试失败时截图"""
         try:
             if hasattr(self, 'screenshot_helper'):
-                screenshot_name = f"{self.__class__.__name__}_{self._testMethodName}_failure"
-                screenshot_path = self.screenshot_helper.take_screenshot(screenshot_name)
+                test_name = f"{self.__class__.__name__}_{self._testMethodName}"
+                # 使用take_failure_screenshot方法，它会自动添加时间戳避免覆盖
+                screenshot_path = self.screenshot_helper.take_failure_screenshot(test_name, "测试执行失败")
                 if screenshot_path:
                     self.logger.info(f"失败截图已保存: {screenshot_path}")
         except Exception as e:
