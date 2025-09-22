@@ -5,6 +5,12 @@ from typing import Optional
 from playwright.sync_api import Page, BrowserContext
 from loguru import logger
 
+try:
+    import allure
+    ALLURE_AVAILABLE = True
+except ImportError:
+    ALLURE_AVAILABLE = False
+
 
 class VideoHelper:
     """视频录制助手类 - 专门用于处理失败测试的视频保存和成功测试的视频清理"""
@@ -49,7 +55,8 @@ class VideoHelper:
         self,
         page: Page,
         test_name: str,
-        error_msg: str = ""
+        error_msg: str = "",
+        attach_to_allure: bool = True
     ) -> Optional[str]:
         """
         在测试失败时保存视频
@@ -116,6 +123,19 @@ class VideoHelper:
                     source_path.unlink()  # 删除原文件
                     file_size = failed_video_path.stat().st_size
                     logger.info(f"测试失败视频 - {test_name} - {error_msg}: {failed_video_path} (大小: {file_size} 字节)")
+                    
+                    # 附加到Allure报告
+                    if attach_to_allure and ALLURE_AVAILABLE:
+                        try:
+                            with open(failed_video_path, 'rb') as f:
+                                allure.attach(
+                                    f.read(),
+                                    name=f"失败视频 - {test_name}",
+                                    attachment_type=allure.attachment_type.WEBM
+                                )
+                        except Exception as e:
+                            logger.warning(f"附加视频到Allure失败: {e}")
+                    
                     return str(failed_video_path)
                 except Exception as copy_error:
                     logger.error(f"复制失败视频文件失败: {str(copy_error)}")

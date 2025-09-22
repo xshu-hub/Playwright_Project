@@ -1,0 +1,42 @@
+[
+  {
+    "name": "登录功能缺陷",
+    "description": "与用户登录相关的测试失败",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*login.*|.*authentication.*|.*credential.*"
+  },
+  {
+    "name": "页面元素缺陷", 
+    "description": "页面元素定位或交互相关的测试失败",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*element.*|.*locator.*|.*selector.*|.*click.*"
+  },
+  {
+    "name": "网络连接问题",
+    "description": "网络请求或连接相关的测试失败",
+    "matchedStatuses": ["failed", "broken"],
+    "messageRegex": ".*timeout.*|.*connection.*|.*network.*|.*request.*"
+  },
+  {
+    "name": "数据验证错误",
+    "description": "数据验证或断言相关的测试失败",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*assert.*|.*expect.*|.*validation.*|.*verify.*"
+  },
+  {
+    "name": "环境配置问题",
+    "description": "测试环境或配置相关的问题",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*config.*|.*setup.*|.*environment.*|.*driver.*"
+  },
+  {
+    "name": "跳过的测试",
+    "description": "被跳过执行的测试用例",
+    "matchedStatuses": ["skipped"]
+  },
+  {
+    "name": "未知错误",
+    "description": "其他未分类的测试失败",
+    "matchedStatuses": ["failed", "broken"]
+  }
+]

@@ -5,6 +5,12 @@ from typing import Optional, Callable
 from playwright.sync_api import Page
 from loguru import logger
 
+try:
+    import allure
+    ALLURE_AVAILABLE = True
+except ImportError:
+    ALLURE_AVAILABLE = False
+
 
 class ScreenshotHelper:
     """截图助手类"""
@@ -35,6 +41,7 @@ class ScreenshotHelper:
         full_page: bool = True,
         element_selector: Optional[str] = None,
         quality: int = 80,
+        attach_to_allure: bool = True,
         **kwargs
     ) -> Optional[str]:
         """
@@ -46,6 +53,7 @@ class ScreenshotHelper:
             full_page: 是否截取整个页面
             element_selector: 元素选择器，如果提供则只截取该元素
             quality: 截图质量 (1-100)
+            attach_to_allure: 是否附加到Allure报告
             **kwargs: 其他截图参数
             
         Returns:
@@ -99,6 +107,18 @@ class ScreenshotHelper:
             else:
                 # 截取整页或视口
                 self.page.screenshot(**screenshot_config)
+            
+            # 附加到Allure报告
+            if attach_to_allure and ALLURE_AVAILABLE:
+                try:
+                    with open(file_path, 'rb') as f:
+                        allure.attach(
+                            f.read(),
+                            name=description or f"截图 - {filename}",
+                            attachment_type=allure.attachment_type.PNG
+                        )
+                except Exception as e:
+                    logger.warning(f"附加截图到Allure失败: {e}")
             
             # 记录日志
             desc_str = f" - {description}" if description else ""

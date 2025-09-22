@@ -12,6 +12,7 @@ from pathlib import Path
 from playwright.sync_api import Playwright, Browser, BrowserContext, Page, sync_playwright
 import logging
 from typing import Optional
+import allure
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -72,83 +73,86 @@ class BaseTest(unittest.TestCase):
     
     def setUp(self):
         """每个测试方法执行前的初始化"""
-        from loguru import logger
-        self.logger = logger
-        self.logger.info(f"开始测试: {self.__class__.__name__}.{self._testMethodName}")
-        
-        # 动态识别testcase子包并配置日志
-        temp_config = logger_config.__class__()
-        testcase_group = temp_config._get_testcase_group()
-        if testcase_group:
-            # 移除现有处理器
-            logger.remove()
-            # 为特定子包设置日志
-            logger_config.setup_logger_for_group(testcase_group, file_output=True)
-        else:
-            # 使用默认日志配置
-            logger_config.setup_logger(file_output=True)
-        
-        # 初始化测试失败标记
-        self._test_failed = False
-        
-        # 创建浏览器上下文
-        context_config = playwright_config.get_context_config()
-        
-        # 获取会话目录
-        session_dir = self.get_session_dir()
-        
-        # 配置视频录制
-        current_config = config_manager.get_config()
-        if current_config.video_record:
-            context_config['record_video_dir'] = str(session_dir / "videos")
-            context_config['record_video_size'] = {"width": 1280, "height": 720}
-        
-        # 创建上下文
-        self.context = self._browser.new_context(**context_config)
-        
-        # 创建页面
-        self.page = self.context.new_page()
-        
-        # 初始化辅助工具
-        self.screenshot_helper = ScreenshotHelper(self.page, session_dir / "screenshots")
-        self.video_helper = VideoHelper(self.page, session_dir / "videos")
-        
-        # 记录测试开始
-        test_name = f"{self.__class__.__name__}.{self._testMethodName}"
-        logger_config.log_test_start(test_name)
-        self.logger.info(f"测试环境初始化完成: {self._testMethodName}")
+        with allure.step("初始化测试环境"):
+            from loguru import logger
+            self.logger = logger
+            self.logger.info(f"开始测试: {self.__class__.__name__}.{self._testMethodName}")
+            
+            # 动态识别testcase子包并配置日志
+            temp_config = logger_config.__class__()
+            testcase_group = temp_config._get_testcase_group()
+            if testcase_group:
+                # 移除现有处理器
+                logger.remove()
+                # 为特定子包设置日志
+                logger_config.setup_logger_for_group(testcase_group, file_output=True)
+            else:
+                # 使用默认日志配置
+                logger_config.setup_logger(file_output=True)
+            
+            # 初始化测试失败标记
+            self._test_failed = False
+            
+            # 创建浏览器上下文
+            context_config = playwright_config.get_context_config()
+            
+            # 获取会话目录
+            session_dir = self.get_session_dir()
+            
+            # 配置视频录制
+            current_config = config_manager.get_config()
+            if current_config.video_record:
+                context_config['record_video_dir'] = str(session_dir / "videos")
+                context_config['record_video_size'] = {"width": 1280, "height": 720}
+            
+            # 创建上下文
+            self.context = self._browser.new_context(**context_config)
+            
+            # 创建页面
+            self.page = self.context.new_page()
+            
+            # 初始化辅助工具
+            self.screenshot_helper = ScreenshotHelper(self.page, session_dir / "screenshots")
+            self.video_helper = VideoHelper(self.page, session_dir / "videos")
+            
+            # 记录测试开始
+            test_name = f"{self.__class__.__name__}.{self._testMethodName}"
+            logger_config.log_test_start(test_name)
+            self.logger.info(f"测试环境初始化完成: {self._testMethodName}")
 
     def tearDown(self):
         """每个测试方法的清理"""
-        # 使用测试状态标记来判断是否失败
-        test_failed = getattr(self, '_test_failed', False)
-        
-        # 记录测试结果
-        if test_failed:
-            error_details = {
-                'test_class': self.__class__.__name__,
-                'test_method': self._testMethodName,
-                'test_full_name': f"{self.__class__.__name__}.{self._testMethodName}",
-                'browser_type': getattr(self, 'browser_type', 'Unknown'),
-                'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown',
-                'session_dir': str(self.get_session_dir()) if hasattr(self, 'get_session_dir') else 'Unknown'
-            }
-            self.logger.error(f"测试失败 [TEST_001] | 测试类: {error_details['test_class']} | 测试方法: {error_details['test_method']} | 浏览器类型: {error_details['browser_type']} | 当前URL: {error_details['current_url']} | 会话目录: {error_details['session_dir']}")
-            self._take_failure_screenshot()
-        else:
-            self.logger.info(f"测试成功: {self.__class__.__name__}.{self._testMethodName}")
-        
-        # 处理视频录制 - 必须在关闭页面之前处理
-        if hasattr(self, 'video_helper'):
+        with allure.step("清理测试环境"):
+            # 使用测试状态标记来判断是否失败
+            test_failed = getattr(self, '_test_failed', False)
+            
+            # 记录测试结果
             if test_failed:
-                # 测试失败时保存视频
-                video_path = self.video_helper.save_video_on_failure(
-                    self.page,
-                    f"{self.__class__.__name__}_{self._testMethodName}",
-                    "Test failed"
-                )
-                if video_path:
-                    self.logger.info(f"失败测试视频已保存: {video_path}")
+                error_details = {
+                    'test_class': self.__class__.__name__,
+                    'test_method': self._testMethodName,
+                    'test_full_name': f"{self.__class__.__name__}.{self._testMethodName}",
+                    'browser_type': getattr(self, 'browser_type', 'Unknown'),
+                    'current_url': self.page.url if hasattr(self, 'page') and self.page else 'Unknown',
+                    'session_dir': str(self.get_session_dir()) if hasattr(self, 'get_session_dir') else 'Unknown'
+                }
+                self.logger.error(f"测试失败 [TEST_001] | 测试类: {error_details['test_class']} | 测试方法: {error_details['test_method']} | 浏览器类型: {error_details['browser_type']} | 当前URL: {error_details['current_url']} | 会话目录: {error_details['session_dir']}")
+                self._take_failure_screenshot()
+            else:
+                self.logger.info(f"测试成功: {self.__class__.__name__}.{self._testMethodName}")
+            
+            # 处理视频录制 - 必须在关闭页面之前处理
+            video_path = None
+            if hasattr(self, 'video_helper'):
+                if test_failed:
+                    # 测试失败时保存视频
+                    video_path = self.video_helper.save_video_on_failure(
+                        self.page,
+                        f"{self.__class__.__name__}_{self._testMethodName}",
+                        "Test failed"
+                    )
+                    if video_path:
+                        self.logger.info(f"失败测试视频已保存: {video_path}")
             # 注意：成功测试的视频清理在关闭上下文后进行
         
         # 关闭页面
@@ -248,24 +252,72 @@ class BaseTest(unittest.TestCase):
     
     def clear_storage(self):
         """清除浏览器存储"""
-        try:
-            self.context.clear_cookies()
-            self.page.evaluate("() => { localStorage.clear(); sessionStorage.clear(); }")
-            self.logger.info("浏览器存储已清除")
-        except Exception as e:
-            self.logger.warning(f"清除存储时出错: {str(e)}")
-    
+        with allure.step("清除浏览器存储"):
+            if hasattr(self, 'page') and self.page:
+                # 清除localStorage
+                self.page.evaluate("() => window.localStorage.clear()")
+                # 清除sessionStorage
+                self.page.evaluate("() => window.sessionStorage.clear()")
+                # 清除cookies
+                self.context.clear_cookies()
+                self.logger.info("浏览器存储已清除")
+
     def wait_for_page_load(self, timeout: int = 30000):
         """等待页面加载完成"""
-        try:
-            self.page.wait_for_load_state("networkidle", timeout=timeout)
-        except Exception as e:
-            self.logger.warning(f"等待页面加载超时: {str(e)}")
-    
+        with allure.step(f"等待页面加载完成 (超时: {timeout}ms)"):
+            if hasattr(self, 'page') and self.page:
+                self.page.wait_for_load_state('networkidle', timeout=timeout)
+                self.logger.info(f"页面加载完成: {self.page.url}")
+
     def get_session_dir(self) -> Path:
-        """获取当前会话目录"""
+        """获取会话目录"""
         return self._session_dir
-    
+
     def take_screenshot(self, name: str = None):
-        """截图方法"""
-        return self.screenshot_helper.take_screenshot(name)
+        """截图"""
+        with allure.step(f"截图: {name or '默认截图'}"):
+            return self.screenshot_helper.take_screenshot(name)
+    
+    # Allure辅助方法
+    @staticmethod
+    def allure_step(step_name: str):
+        """Allure步骤装饰器"""
+        return allure.step(step_name)
+    
+    def attach_screenshot(self, name: str = "Screenshot"):
+        """附加截图到Allure报告"""
+        try:
+            if hasattr(self, 'page') and self.page:
+                screenshot = self.page.screenshot()
+                allure.attach(
+                    screenshot,
+                    name=name,
+                    attachment_type=allure.attachment_type.PNG
+                )
+                self.logger.info(f"截图已附加到Allure报告: {name}")
+        except Exception as e:
+            self.logger.error(f"附加截图失败: {e}")
+    
+    def attach_text(self, text: str, name: str = "Text"):
+        """附加文本到Allure报告"""
+        allure.attach(
+            text,
+            name=name,
+            attachment_type=allure.attachment_type.TEXT
+        )
+    
+    def attach_html(self, html: str, name: str = "HTML"):
+        """附加HTML到Allure报告"""
+        allure.attach(
+            html,
+            name=name,
+            attachment_type=allure.attachment_type.HTML
+        )
+    
+    def attach_json(self, json_data: str, name: str = "JSON"):
+        """附加JSON到Allure报告"""
+        allure.attach(
+            json_data,
+            name=name,
+            attachment_type=allure.attachment_type.JSON
+        )
