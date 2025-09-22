@@ -1,6 +1,7 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
 from typing import List, Dict
+from utils.allure_helper import allure_step
 
 
 class ApprovalCreatePage(BasePage):
@@ -36,42 +37,51 @@ class ApprovalCreatePage(BasePage):
         self.breadcrumb = ".breadcrumb"
         self.back_to_dashboard = "a[href='dashboard.html']"
         
+    @allure_step("导航到创建审批页面")
     def navigate(self):
         """导航到创建审批页面"""
         self.page.goto(self.url)
         self.wait_for_page_load()
         
+    @allure_step("等待创建审批页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
         self.wait_for_element(self.approval_form)
         self.wait_for_element(self.title_input)
         
+    @allure_step("填写申请标题: {title}")
     def fill_title(self, title: str):
         """填写申请标题"""
         self.fill(self.title_input, title)
         
+    @allure_step("选择申请类型: {type_value}")
     def select_type(self, type_value: str):
         """选择申请类型"""
         self.select_option(self.type_select, type_value)
         
+    @allure_step("选择优先级: {priority}")
     def select_priority(self, priority: str):
         """选择优先级"""
         # 点击对应的优先级选项
         priority_option = f".priority-option[data-priority='{priority}']"
         self.click(priority_option)
         
+    @allure_step("填写申请描述: {description}")
     def fill_description(self, description: str):
         """填写申请描述"""
         self.fill(self.description_textarea, description)
         
+    @allure_step("点击提交按钮")
     def click_submit(self):
         """点击提交按钮"""
         self.click(self.submit_button)
         
+    @allure_step("点击取消按钮")
     def click_cancel(self):
         """点击取消按钮"""
         self.click(self.cancel_button)
         
+    @allure_step("创建审批申请: {title}")
     def create_approval(self, title: str, type_value: str, priority: str, description: str):
         """创建完整的审批申请"""
         self.fill_title(title)
@@ -154,36 +164,44 @@ class ApprovalListPage(BasePage):
         self.pagination = ".pagination"
         self.page_info = ".page-info"
         
+    @allure_step("导航到审批列表页面")
     def navigate(self):
         """导航到审批列表页面"""
         self.page.goto(self.url)
         self.wait_for_page_load()
         
+    @allure_step("等待审批列表页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
         self.wait_for_element(self.filters)
         self.wait_for_element(self.approvals_list)
         
+    @allure_step("按状态筛选: {status}")
     def filter_by_status(self, status: str):
-        """按状态筛选"""
+        """按状态筛选审批"""
         self.select_option(self.status_filter, status)
         
+    @allure_step("按类型筛选: {type_value}")
     def filter_by_type(self, type_value: str):
-        """按类型筛选"""
+        """按类型筛选审批"""
         self.select_option(self.type_filter, type_value)
         
+    @allure_step("按优先级筛选: {priority}")
     def filter_by_priority(self, priority: str):
-        """按优先级筛选"""
+        """按优先级筛选审批"""
         self.select_option(self.priority_filter, priority)
         
+    @allure_step("搜索审批: {search_term}")
     def search_approvals(self, search_term: str):
-        """搜索申请"""
+        """搜索审批"""
         self.fill(self.search_filter, search_term)
         
+    @allure_step("点击刷新按钮")
     def click_refresh(self):
         """点击刷新按钮"""
         self.click(self.refresh_button)
         
+    @allure_step("获取审批数量")
     def get_approval_count(self) -> int:
         """获取申请数量"""
         return self.page.locator(self.approval_item).count()
@@ -338,7 +356,7 @@ class ApprovalDetailPage(BasePage):
         self.breadcrumb = ".breadcrumb"
         
     def navigate_with_id(self, approval_id: str):
-        """导航到指定ID的申请详情页面"""
+        """导航到指定ID的审批详情页面"""
         url = f"{self.url}?id={approval_id}"
         self.page.goto(url)
         self.wait_for_page_load()
@@ -349,15 +367,15 @@ class ApprovalDetailPage(BasePage):
         self.wait_for_element(self.approval_info)
         
     def get_approval_title(self) -> str:
-        """获取申请标题"""
+        """获取审批标题"""
         return self.get_text(self.approval_title)
         
     def get_approval_status(self) -> str:
-        """获取申请状态"""
+        """获取审批状态"""
         return self.get_text(self.approval_status)
         
     def get_approval_description(self) -> str:
-        """获取申请描述"""
+        """获取审批描述"""
         return self.get_text(self.approval_description)
         
     def get_submitter_info(self) -> str:
@@ -381,32 +399,18 @@ class ApprovalDetailPage(BasePage):
         self.click(self.reject_button)
         
     def approve_with_comment(self, comment: str = ""):
-        """批准申请并添加意见"""
-        # 点击通过申请按钮显示审批表单
-        self.click_approve()
-        # 等待审批表单显示
-        self.wait_for_element(self.comment_textarea, timeout=5000)
-        # 填写审批意见
+        """批准审批并添加意见"""
         if comment:
             self.fill_comment(comment)
-        # 提交审批表单
-        self.page.locator("button[type='submit']").click()
-        # 等待审批处理完成
-        self.page.wait_for_timeout(2000)
+        self.click_approve()
+        self.wait_for_approval_processed()
         
     def reject_with_comment(self, comment: str = ""):
-        """拒绝申请并添加意见"""
-        # 点击拒绝申请按钮显示审批表单
-        self.click_reject()
-        # 等待审批表单显示
-        self.wait_for_element(self.comment_textarea, timeout=5000)
-        # 填写审批意见
+        """拒绝审批并添加意见"""
         if comment:
             self.fill_comment(comment)
-        # 提交审批表单
-        self.page.locator("button[type='submit']").click()
-        # 等待审批处理完成
-        self.page.wait_for_timeout(2000)
+        self.click_reject()
+        self.wait_for_approval_processed()
         
     def click_back(self):
         """点击返回按钮"""

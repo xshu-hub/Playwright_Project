@@ -1,6 +1,6 @@
 # Playwright Web UI 自动化测试框架
 
-一个基于 Playwright 和 pytest 的现代化 Web UI 自动化测试框架，采用页面对象模型(POM)设计模式，支持多浏览器、并行执行、失败重试等企业级功能。
+一个基于 Playwright 和 unittest 的现代化 Web UI 自动化测试框架，采用页面对象模型(POM)设计模式，支持多浏览器、截图录制、失败重试等企业级功能。
 
 ## 📋 目录
 
@@ -16,17 +16,16 @@
 - **分层架构设计**：配置层、页面对象层、测试用例层、工具层清晰分离
 - **页面对象模型(POM)**：封装页面元素和操作，提高代码复用性和维护性
 - **多浏览器支持**：支持 Chromium、Firefox、WebKit 三种浏览器引擎
-- **并行测试执行**：支持多进程并行执行，大幅提升测试效率
 - **智能配置管理**：支持环境变量、配置文件的多层配置
-- **丰富的测试报告**：集成 Allure 和 HTML 报告，提供详细的测试结果
+- **丰富的截图和视频录制**：自动截图、失败截图、视频录制功能
+- **完善的日志系统**：详细的测试执行日志和错误追踪
 
 ## 🛠️ 技术栈
 
-- **核心框架**：Playwright + pytest
-- **报告工具**：Allure、pytest-html
-- **并行执行**：pytest-xdist
+- **核心框架**：Playwright + unittest
 - **日志系统**：loguru
-- **配置管理**：pydantic + python-dotenv
+- **配置管理**：pydantic + YAML配置
+- **图像处理**：Pillow + opencv-python
 
 
 ## 📚 详细文档
@@ -62,42 +61,42 @@ pip install -r requirements.txt
 # 4. 安装浏览器
 playwright install
 
-# 5. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，根据需要修改配置
+# 5. 配置项目（可选）
+# 项目使用 config.yaml 进行配置，默认配置已可直接使用
+# 如需自定义，可编辑 config.yaml 文件或设置环境变量 PLAYWRIGHT_ENV
 
 # 6. 运行测试
-python run_tests.py
+python -m unittest discover tests -v
 ```
 
 ### 常用命令
 
 ```bash
 # 运行所有测试
-python run_tests.py
+python -m unittest discover tests -v
 
 # 运行特定测试文件
-pytest tests/test_login.py -v
+python -m unittest tests.test_login -v
 
-# 运行标记测试
-pytest -m smoke -v
+# 运行特定测试方法
+python -m unittest tests.test_login.TestLogin.test_successful_login_admin -v
 
-# 并行运行测试
-pytest -n 4 tests/
-
-# 生成 Allure 报告
-allure serve reports/allure-results
+# 运行测试并显示详细输出
+python -m unittest discover tests -v
 ```
 
 ## 📁 项目结构
 
 ```
 PlaywrightProject/
-├── .env.example              # 环境变量模板
+├── config.yaml               # 项目配置文件
 ├── config/                   # 配置模块
-│   ├── env_config.py        # 环境配置管理
-│   └── playwright_config.py # Playwright 配置
-├── pages/                    # 页面对象模块
+│   └── config.py               # 统一配置管理（包含Playwright配置）
+├── utils/                    # 工具模块
+│   ├── config.py            # YAML配置管理
+│   ├── logger_config.py     # 日志配置
+│   ├── screenshot_helper.py # 截图助手
+│   └── video_helper.py      # 视频录制助手
 │   ├── base_page.py         # 页面基类
 │   ├── login_page.py        # 登录页面
 │   ├── dashboard_page.py    # 仪表板页面
@@ -110,10 +109,10 @@ PlaywrightProject/
 │   ├── logger_config.py     # 日志配置
 │   ├── screenshot_helper.py # 截图助手
 │   └── video_helper.py      # 视频助手
-├── conftest.py              # pytest 配置
-├── pytest.ini              # pytest 配置文件
-├── requirements.txt         # 依赖列表
-└── run_tests.py            # 测试运行器
+├── reports/                  # 测试报告目录
+│   ├── screenshots/         # 截图文件
+│   └── videos/             # 视频文件
+└── requirements.txt         # 依赖列表
 ```
 
 ## 📞 支持与贡献

@@ -79,11 +79,11 @@ class ScreenshotHelper:
             # 设置图片质量和格式
             if quality < 100:
                 screenshot_config['type'] = 'jpeg'
-                screenshot_config['quality'] = str(quality)
+                screenshot_config['quality'] = quality  # 修复：使用数字而不是字符串
             
             # 添加超时设置
             if 'timeout' not in screenshot_config:
-                screenshot_config['timeout'] = str(30000)  # 30秒超时
+                screenshot_config['timeout'] = 30000  # 修复：使用数字而不是字符串
             
             # 截图
             if element_selector:

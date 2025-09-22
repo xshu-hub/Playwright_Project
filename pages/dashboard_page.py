@@ -1,5 +1,6 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
+from utils.allure_helper import allure_step
 
 
 class DashboardPage(BasePage):
@@ -59,24 +60,29 @@ class DashboardPage(BasePage):
         self.empty_state = ".empty-state"
         self.empty_message = ".empty-message"
         
+    @allure_step("导航到仪表板页面")
     def navigate(self):
         """导航到仪表板页面"""
         self.page.goto(self.url)
         self.wait_for_page_load()
         
+    @allure_step("等待仪表板页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
         self.wait_for_element(self.stats_container)
         self.wait_for_element(self.user_info)
         
+    @allure_step("获取当前用户姓名")
     def get_user_name(self) -> str:
         """获取当前用户姓名"""
         return self.get_text(self.user_name)
         
+    @allure_step("获取用户角色")
     def get_user_role(self) -> str:
         """获取用户角色"""
         return self.get_text(self.user_role)
         
+    @allure_step("获取用户信息")
     def get_user_info(self) -> dict:
         """获取用户信息"""
         return {
@@ -84,20 +90,18 @@ class DashboardPage(BasePage):
             "role": self.get_user_role()
         }
         
+    @allure_step("点击退出登录按钮")
     def click_logout(self):
         """点击退出登录按钮"""
         self.click(self.logout_button)
         
+    @allure_step("执行退出登录操作")
     def logout(self):
-        """执行退出登录操作"""
+        """退出登录"""
         self.click_logout()
-        # 等待一段时间让JavaScript执行
-        self.page.wait_for_timeout(2000)
-        # 直接导航到登录页面
-        self.page.goto("http://localhost:8080/pages/login.html")
-        # 等待页面加载
-        self.page.wait_for_load_state("load")
+        self.wait_for_logout_redirect()
         
+    @allure_step("等待退出登录重定向")
     def wait_for_logout_redirect(self, timeout: int = 10000):
         """等待登出后重定向到登录页面"""
         try:
@@ -112,29 +116,32 @@ class DashboardPage(BasePage):
                 current_url = self.page.url
                 raise Exception(f"未能重定向到登录页面，当前URL: {current_url}, 错误: {str(e)}")
         
+    @allure_step("获取待处理审批数量")
     def get_pending_approvals_count(self) -> str:
         """获取待处理审批数量"""
-        card = self.page.locator(self.pending_approvals_card)
-        return card.locator(self.stat_numbers).text_content()
+        return self.get_text(f"{self.pending_approvals_card} {self.stat_numbers}")
         
+    @allure_step("获取已提交审批数量")
     def get_submitted_approvals_count(self) -> str:
-        """获取我的申请数量"""
-        card = self.page.locator(self.submitted_approvals_card)
-        return card.locator(self.stat_numbers).text_content()
+        """获取已提交审批数量"""
+        return self.get_text(f"{self.submitted_approvals_card} {self.stat_numbers}")
         
+    @allure_step("获取系统用户总数")
     def get_total_users_count(self) -> str:
-        """获取系统用户数量"""
-        card = self.page.locator(self.total_users_card)
-        return card.locator(self.stat_numbers).text_content()
+        """获取系统用户总数"""
+        return self.get_text(f"{self.total_users_card} {self.stat_numbers}")
         
+    @allure_step("点击创建审批按钮")
     def click_create_approval(self):
-        """点击创建审批申请按钮"""
+        """点击创建审批按钮"""
         self.click(self.create_approval_btn)
         
+    @allure_step("点击审批列表按钮")
     def click_approval_list(self):
         """点击审批列表按钮"""
         self.click(self.approval_list_btn)
         
+    @allure_step("点击用户管理按钮")
     def click_user_management(self):
         """点击用户管理按钮"""
         self.click(self.user_management_btn)

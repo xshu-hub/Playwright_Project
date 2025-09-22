@@ -1,5 +1,6 @@
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
+from utils.allure_helper import allure_step
 
 
 class LoginPage(BasePage):
@@ -34,11 +35,13 @@ class LoginPage(BasePage):
         self.login_form = "#loginForm"
         self.demo_accounts_section = ".demo-accounts"
         
+    @allure_step("导航到登录页面")
     def navigate(self):
         """导航到登录页面"""
         super().navigate(self.url)
         self.wait_for_page_load()
         
+    @allure_step("等待登录页面加载完成")
     def wait_for_page_load(self):
         """等待页面加载完成"""
         # 使用更长的超时时间等待关键元素
@@ -46,14 +49,17 @@ class LoginPage(BasePage):
         self.wait_for_element(self.username_input, timeout=self.long_timeout)
         self.wait_for_element(self.password_input, timeout=self.long_timeout)
         
+    @allure_step("输入用户名: {username}")
     def enter_username(self, username: str):
         """输入用户名"""
         self.fill(self.username_input, username)
         
+    @allure_step("输入密码")
     def enter_password(self, password: str):
         """输入密码"""
         self.fill(self.password_input, password)
         
+    @allure_step("设置记住登录状态: {should_check}")
     def check_remember_login(self, should_check: bool = True):
         """勾选或取消勾选记住登录状态"""
         if should_check:
@@ -61,18 +67,22 @@ class LoginPage(BasePage):
         else:
             self.uncheck(self.remember_checkbox)
             
+    @allure_step("点击登录按钮")
     def click_login_button(self):
         """点击登录按钮"""
         self.click(self.login_button)
         
+    @allure_step("点击演示管理员账号按钮")
     def click_demo_admin_button(self):
         """点击演示管理员账号按钮"""
         self.click(self.demo_admin_button)
         
+    @allure_step("点击演示普通用户账号按钮")
     def click_demo_user_button(self):
         """点击演示普通用户账号按钮"""
         self.click(self.demo_user_button)
         
+    @allure_step("执行登录操作: 用户名={username}, 记住登录={remember}")
     def login(self, username: str, password: str, remember: bool = False):
         """执行完整登录流程"""
         self.enter_username(username)
@@ -81,21 +91,25 @@ class LoginPage(BasePage):
             self.check_remember_login(True)
         self.click_login_button()
         
+    @allure_step("使用演示管理员账号登录")
     def login_with_demo_admin(self):
         """使用演示管理员账号登录"""
         self.click_demo_admin_button()
         self.click_login_button()
         
+    @allure_step("使用演示普通用户账号登录")
     def login_with_demo_user(self):
         """使用演示普通用户账号登录"""
         self.click_demo_user_button()
         self.click_login_button()
         
+    @allure_step("等待登录成功")
     def wait_for_login_success(self, timeout: int = 5000):
         """等待登录成功（页面跳转到仪表板）"""
         # 等待页面跳转到仪表板
         self.page.wait_for_url("**/dashboard.html", timeout=timeout)
         
+    @allure_step("等待登录错误消息显示")
     def wait_for_login_error(self, timeout: int = 3000):
         """等待登录错误消息显示"""
         self.wait_for_element(self.error_message, timeout=timeout)
