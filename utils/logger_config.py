@@ -419,7 +419,7 @@ class LoggerConfig:
             test_name: 测试名称
             test_data: 测试数据
         """
-        logger.info(f"🚀 开始执行测试: {test_name}")
+        logger.info(f"开始执行测试: {test_name}")
         if test_data:
             logger.debug(f"测试数据: {test_data}")
     
@@ -432,14 +432,14 @@ class LoggerConfig:
             result: 测试结果 (PASSED/FAILED/SKIPPED)
             duration: 执行时长(秒)
         """
-        emoji = {
-            "PASSED": "✅",
-            "FAILED": "❌", 
-            "SKIPPED": "⏭️"
-        }.get(result, "❓")
+        status_text = {
+            "PASSED": "PASSED",
+            "FAILED": "FAILED", 
+            "SKIPPED": "SKIPPED"
+        }.get(result, "UNKNOWN")
         
         duration_str = f" (耗时: {duration:.2f}s)" if duration else ""
-        logger.info(f"{emoji} 测试完成: {test_name} - {result}{duration_str}")
+        logger.info(f"测试完成: {test_name} - {status_text}{duration_str}")
     
     @staticmethod
     def log_step(step_name: str, step_data: Optional[dict] = None) -> None:
@@ -449,7 +449,7 @@ class LoggerConfig:
             step_name: 步骤名称
             step_data: 步骤数据
         """
-        logger.info(f"📋 执行步骤: {step_name}")
+        logger.info(f"执行步骤: {step_name}")
         if step_data:
             logger.debug(f"步骤数据: {step_data}")
     
@@ -463,8 +463,8 @@ class LoggerConfig:
             actual: 实际值
             expected: 期望值
         """
-        emoji = "✅" if result else "❌"
-        logger.info(f"{emoji} 断言: {assertion} - {'通过' if result else '失败'}")
+        status_text = "通过" if result else "失败"
+        logger.info(f"断言: {assertion} - {status_text}")
         
         if not result and actual is not None and expected is not None:
             logger.error(f"期望值: {expected}, 实际值: {actual}")
@@ -491,7 +491,7 @@ class LoggerConfig:
         """
         element_str = f" 元素: {element}" if element else ""
         value_str = f" 值: {value}" if value else ""
-        logger.debug(f"🖱️ 页面操作: {action}{element_str}{value_str}")
+        logger.debug(f"页面操作: {action}{element_str}{value_str}")
 
 
 # 全局日志配置实例

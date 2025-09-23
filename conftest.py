@@ -12,8 +12,7 @@ import allure
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from config.playwright_config import PLAYWRIGHT_CONFIG
-from config.env_config import config_manager
+from config.env_config import config_manager, PLAYWRIGHT_CONFIG
 from utils.logger_config import logger_config
 from utils.screenshot_helper import ScreenshotHelper
 import logging
@@ -29,62 +28,24 @@ logger_config.setup_logger(
 )
 
 
-# 全局变量存储当前会话目录
-current_session_dir = None
-
 def pytest_configure(config):
     """pytest配置钩子 - 在测试运行前设置报告目录"""
-    global current_session_dir
-    import os
     
-    # 检查是否为worker进程
-    if hasattr(config, 'workerinput'):
-        # Worker进程：从环境变量或最新目录获取会话目录
-        session_dir_env = os.environ.get('PYTEST_SESSION_DIR')
-        if session_dir_env:
-            current_session_dir = Path(session_dir_env)
-            config._current_session_dir = current_session_dir
-            
-            # 为worker进程设置Allure配置
-            allure_results_dir = str(current_session_dir / 'allure-results')
-            config.option.alluredir = allure_results_dir
-            config.option.allure_report_dir = allure_results_dir
-        else:
-            # 查找最新的会话目录
-            reports_dir = Path('reports')
-            if reports_dir.exists():
-                session_dirs = [d for d in reports_dir.iterdir() if d.is_dir() and d.name.startswith('test_session_')]
-                if session_dirs:
-                    current_session_dir = max(session_dirs, key=lambda x: x.stat().st_mtime)
-                    config._current_session_dir = current_session_dir
-                    
-                    # 为worker进程设置Allure配置
-                    allure_results_dir = str(current_session_dir / 'allure-results')
-                    config.option.alluredir = allure_results_dir
-                    config.option.allure_report_dir = allure_results_dir
-        return
+    # 固定使用reports目录
+    reports_dir = Path('reports')
     
-    # 生成基于时间戳的报告目录名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    test_session_dir = Path('reports') / f'test_session_{timestamp}'
-    current_session_dir = test_session_dir
+    # 创建固定的报告目录和子目录
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    (reports_dir / 'allure-results').mkdir(exist_ok=True)
+    (reports_dir / 'allure-report').mkdir(exist_ok=True)
+    (reports_dir / 'screenshots').mkdir(exist_ok=True)
+    (reports_dir / 'videos').mkdir(exist_ok=True)
     
-    # 创建主报告目录和子目录
-    test_session_dir.mkdir(parents=True, exist_ok=True)
-    (test_session_dir / 'allure-results').mkdir(exist_ok=True)
-    (test_session_dir / 'allure-report').mkdir(exist_ok=True)
-    (test_session_dir / 'screenshots').mkdir(exist_ok=True)
-    (test_session_dir / 'videos').mkdir(exist_ok=True)
-    (test_session_dir / 'html').mkdir(exist_ok=True)
+    # 将报告目录路径存储到配置中
+    config._reports_dir = reports_dir
     
-    # 将当前会话目录路径存储到配置和环境变量中
-    config._current_session_dir = test_session_dir
-    import os
-    os.environ['PYTEST_SESSION_DIR'] = str(test_session_dir)
-    
-    # 动态设置报告路径
-    # 直接设置Allure报告目录（兼容pytest-xdist）
-    allure_results_dir = str(test_session_dir / 'allure-results')
+    # 设置Allure报告目录
+    allure_results_dir = str(reports_dir / 'allure-results')
     if not hasattr(config.option, 'allure_report_dir') or not config.option.allure_report_dir:
         config.option.allure_report_dir = allure_results_dir
     
@@ -92,25 +53,14 @@ def pytest_configure(config):
     if not hasattr(config.option, 'alluredir') or not config.option.alluredir:
         config.option.alluredir = allure_results_dir
     
-    # 设置HTML报告路径
-    html_report_path = str(test_session_dir / 'html' / 'report.html')
-    if not hasattr(config.option, 'htmlpath') or not config.option.htmlpath:
-        config.option.htmlpath = html_report_path
-    
-    # 设置self_contained_html选项
-    if not hasattr(config.option, 'self_contained_html'):
-        config.option.self_contained_html = True
-    
     # 为了兼容性，仍然添加到addopts（主要用于非并行模式）
     try:
         config.addinivalue_line('addopts', f'--alluredir={allure_results_dir}')
-        config.addinivalue_line('addopts', f'--html={html_report_path}')
-        config.addinivalue_line('addopts', '--self-contained-html')
     except Exception as e:
         logger.warning(f"Failed to add to addopts: {e}")
     
     logger.info(f"测试开始时间: {datetime.now()}")
-    logger.info(f"当前测试会话目录: {test_session_dir}")
+    logger.info(f"当前报告目录: {reports_dir}")
     logger.info(f"浏览器: {PLAYWRIGHT_CONFIG['default_browser']}")
     logger.info(f"无头模式: {PLAYWRIGHT_CONFIG['browser_config']['headless']}")
     logger.info("-" * 50)
@@ -142,17 +92,16 @@ def browser(playwright: Playwright):
 
 @pytest.fixture(scope="function")
 def context(browser: Browser, request):
-    """浏览器上下文 Fixture - 使用动态会话目录"""
-    # 获取当前会话目录
-    global current_session_dir
-    session_dir = current_session_dir if current_session_dir else Path('reports')
+    """浏览器上下文 Fixture - 使用固定reports目录"""
+    # 固定使用reports目录
+    reports_dir = Path('reports')
     
     # 获取动态配置并设置视频录制路径
     context_config = PLAYWRIGHT_CONFIG['context_config'].copy()
     
     # 根据env_config.py的配置决定是否启用视频录制
     if config_manager.config.video_record:
-        context_config['record_video_dir'] = str(session_dir / 'videos')
+        context_config['record_video_dir'] = str(reports_dir / 'videos')
     else:
         context_config['record_video_dir'] = None
     
@@ -177,9 +126,8 @@ def page(context: BrowserContext):
 @pytest.fixture(scope="function")
 def screenshot_helper(page: Page):
     """截图助手 Fixture"""
-    # 获取当前会话目录
-    session_dir = os.environ.get('PYTEST_SESSION_DIR', 'reports')
-    return ScreenshotHelper(page, f"{session_dir}/screenshots")
+    # 固定使用reports目录
+    return ScreenshotHelper(page, "reports/screenshots")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -215,10 +163,9 @@ def pytest_runtest_makereport(item, call):
                         with screenshot_lock:
                             start_time = time.time()
                             
-                            # 获取当前会话目录
-                            global current_session_dir
-                            session_dir = current_session_dir if current_session_dir else Path('reports')
-                            screenshot_path = session_dir / 'screenshots' / f"{item.nodeid.replace('::', '_').replace('/', '_')}_failure.png"
+                            # 固定使用reports目录
+                            reports_dir = Path('reports')
+                            screenshot_path = reports_dir / 'screenshots' / f"{item.nodeid.replace('::', '_').replace('/', '_')}_failure.png"
                             
                             # 使用超时控制截图
                             if hasattr(page, 'screenshot'):
@@ -273,13 +220,29 @@ def test_logger(request):
     from loguru import logger
     test_name = request.node.name
     
-    # 从测试路径中提取子目录名称
+    # 从测试路径中动态提取子目录名称
     test_path = request.node.nodeid
     subdir_name = None
-    if 'test_001' in test_path:
-        subdir_name = 'test_001'
-    elif 'test_002' in test_path:
-        subdir_name = 'test_002'
+    
+    # 动态获取测试子包名称
+    import re
+    # 匹配 tests/test_xxx/ 格式的路径
+    match = re.search(r'tests[/\\](test_\w+)[/\\]', test_path)
+    if match:
+        subdir_name = match.group(1)
+    else:
+        # 如果没有匹配到子目录，尝试从文件路径中提取
+        # 匹配 test_xxx.py 格式的文件名
+        file_match = re.search(r'(test_\w+)\.py', test_path)
+        if file_match:
+            # 检查是否在tests目录的子目录中
+            path_parts = test_path.replace('\\', '/').split('/')
+            if 'tests' in path_parts:
+                tests_index = path_parts.index('tests')
+                if tests_index + 1 < len(path_parts):
+                    potential_subdir = path_parts[tests_index + 1]
+                    if potential_subdir.startswith('test_'):
+                        subdir_name = potential_subdir
     
     # 设置测试上下文，让所有日志都能路由到正确的子目录
     if subdir_name:

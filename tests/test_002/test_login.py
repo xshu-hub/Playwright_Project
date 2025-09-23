@@ -340,3 +340,51 @@ class TestLogin:
         
         # 验证登录时间在合理范围内（小于5秒）
         assert login_duration < 5.0, f"登录耗时过长: {login_duration}秒"
+        
+    def test_assertion_failure_wrong_title(self, page: Page):
+        """测试断言失败场景1：验证错误的页面标题"""
+        self.login_page.navigate()
+        
+        # 故意使用错误的页面标题进行断言，用于测试失败场景
+        try:
+            expect(page).to_have_title("错误的页面标题 - 这应该会失败")
+        except AssertionError as e:
+            logger.info(f"预期的断言失败: {str(e)}")
+            logger.error(f"断言失败 - 页面标题不匹配: {str(e)}")
+            # 重新抛出异常以确保测试失败
+            raise
+            
+    def test_assertion_failure_wrong_user_info(self, page: Page):
+        """测试断言失败场景2：验证错误的用户信息"""
+        self.login_page.navigate()
+        self.login_page.login("admin", "admin123")
+        
+        # 等待登录成功
+        expect(page).to_have_url("http://localhost:8080/pages/dashboard.html")
+        self.dashboard_page.wait_for_page_load()
+        
+        # 获取用户信息并故意使用错误的断言
+        user_info = self.dashboard_page.get_user_info()
+        try:
+            # 故意断言错误的用户名，用于测试失败场景
+            assert user_info["username"] == "错误的用户名", f"实际用户名: {user_info['username']}"
+        except AssertionError as e:
+            logger.info(f"预期的断言失败: {str(e)}")
+            logger.error(f"断言失败 - 用户信息不匹配: {str(e)}")
+            # 重新抛出异常以确保测试失败
+            raise
+             
+    def test_element_locator_failure(self, page: Page):
+        """测试定位失败场景：尝试定位不存在的元素"""
+        self.login_page.navigate()
+        
+        try:
+            # 故意尝试定位一个不存在的元素，用于测试定位失败场景
+            non_existent_element = page.locator("#non-existent-element-id-12345")
+            # 设置较短的超时时间以快速失败
+            non_existent_element.click(timeout=2000)
+        except Exception as e:
+            logger.info(f"预期的定位失败: {str(e)}")
+            logger.error(f"元素定位失败: {str(e)}")
+            # 重新抛出异常以确保测试失败
+            raise

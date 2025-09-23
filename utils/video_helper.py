@@ -96,7 +96,7 @@ class VideoHelper:
                 # 删除视频文件
                 if self.current_video_path and self.current_video_path.exists():
                     self.current_video_path.unlink()
-                    logger.info("🗑️ 视频文件已删除")
+                    logger.info("视频文件已删除")
                 return None
                 
         except Exception as e:

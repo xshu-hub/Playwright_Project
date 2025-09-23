@@ -18,15 +18,15 @@
 - **多浏览器支持**：支持 Chromium、Firefox、WebKit 三种浏览器引擎
 - **并行测试执行**：支持多进程并行执行，大幅提升测试效率
 - **智能配置管理**：支持环境变量、配置文件的多层配置
-- **丰富的测试报告**：集成 Allure 和 HTML 报告，提供详细的测试结果
+- **丰富的测试报告**：集成 Allure 报告，提供详细的测试结果
 
 ## 🛠️ 技术栈
 
 - **核心框架**：Playwright + pytest
-- **报告工具**：Allure、pytest-html
+- **报告工具**：Allure
 - **并行执行**：pytest-xdist
 - **日志系统**：loguru
-- **配置管理**：pydantic + python-dotenv
+- **配置管理**：pydantic + PyYAML
 
 
 ## 📚 详细文档
@@ -62,9 +62,8 @@ pip install -r requirements.txt
 # 4. 安装浏览器
 playwright install
 
-# 5. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，根据需要修改配置
+# 5. 配置环境（可选）
+# 编辑 config/config.yaml 文件，根据需要修改配置
 
 # 6. 运行测试
 python run_tests.py
@@ -93,8 +92,8 @@ allure serve reports/allure-results
 
 ```
 PlaywrightProject/
-├── .env.example              # 环境变量模板
 ├── config/                   # 配置模块
+│   ├── config.yaml          # YAML配置文件
 │   ├── env_config.py        # 环境配置管理
 │   └── playwright_config.py # Playwright 配置
 ├── pages/                    # 页面对象模块

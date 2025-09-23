@@ -32,12 +32,8 @@ class BasePage(ABC):
         """
         self.page = page
         
-        # 获取当前会话目录
-        import os
-        session_dir = os.environ.get('PYTEST_SESSION_DIR', 'reports')
-        
-        # 使用会话目录创建ScreenshotHelper实例
-        self.screenshot_helper = ScreenshotHelper(page, f"{session_dir}/screenshots")
+        # 固定使用reports目录
+        self.screenshot_helper = ScreenshotHelper(page, "reports/screenshots")
         self.timeout = 10000  # 默认超时时间 10 秒
         self.short_timeout = 3000  # 短超时时间 3 秒
         self.long_timeout = 30000  # 长超时时间 30 秒
