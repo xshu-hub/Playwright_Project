@@ -22,9 +22,9 @@ from config.env_config import config_manager, PLAYWRIGHT_CONFIG
 from utils.logger_config import logger_config
 from utils.screenshot_helper import ScreenshotHelper
 
-# 预编译正则表达式以提高性能
-_SUBDIR_PATTERN = re.compile(r'(?:^|[/\\])tests[/\\]([^/\\]+)[/\\]')
-_NODEID_PATTERN = re.compile(r'tests[/\\]([^/\\]+)[/\\]')
+# 预编译正则表达式以提高性能 - 支持二级目录
+_SUBDIR_PATTERN = re.compile(r'(?:^|[/\\])tests[/\\]([^/\\]+(?:[/\\][^/\\]+)?)[/\\]')
+_NODEID_PATTERN = re.compile(r'tests[/\\]([^/\\]+(?:[/\\][^/\\]+)?)[/\\]')
 
 # 获取日志记录器
 logger = logging.getLogger(__name__)

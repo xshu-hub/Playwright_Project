@@ -77,17 +77,32 @@ class LoggerConfig:
         return True
     
     def _scan_test_directories(self) -> None:
-        """扫描tests目录下的所有子目录"""
+        """扫描tests目录下的所有子目录（支持二级目录）"""
         if not self.tests_dir.exists():
             return
             
-        # 扫描tests目录下的所有子目录
-        for subdir in self.tests_dir.iterdir():
-            if subdir.is_dir() and not subdir.name.startswith('__'):
-                self._test_subdirs[subdir.name] = subdir
-                # 为每个测试子目录创建对应的日志目录
-                log_subdir = self.log_dir / subdir.name
-                log_subdir.mkdir(exist_ok=True)
+        # 递归扫描tests目录下的所有子目录（支持二级目录）
+        def scan_recursive(base_path: Path, relative_path: str = ""):
+            for item in base_path.iterdir():
+                if item.is_dir() and not item.name.startswith('__'):
+                    # 构建相对路径标识符
+                    if relative_path:
+                        subdir_key = f"{relative_path}/{item.name}"
+                    else:
+                        subdir_key = item.name
+                    
+                    # 存储目录映射
+                    self._test_subdirs[subdir_key] = item
+                    
+                    # 为每个测试子目录创建对应的日志目录
+                    log_subdir = self.log_dir / subdir_key.replace('/', '_')
+                    log_subdir.mkdir(exist_ok=True)
+                    
+                    # 递归扫描下一级目录（限制深度为2级）
+                    if not relative_path:  # 只在第一级目录时继续递归
+                        scan_recursive(item, item.name)
+        
+        scan_recursive(self.tests_dir)
     
     @staticmethod
     def _create_subdir_filter(target_subdir: str, error_only: bool = False):
@@ -133,14 +148,16 @@ class LoggerConfig:
             retention: 日志保留时间
             file_format: 文件日志格式
         """
-        log_subdir = self.log_dir / subdir_name
+        # 将斜杠替换为下划线，确保目录名称在所有操作系统上都有效
+        safe_subdir_name = subdir_name.replace('/', '_').replace('\\', '_')
+        log_subdir = self.log_dir / safe_subdir_name
         log_subdir.mkdir(exist_ok=True)
         
         # 创建子目录专用的正常日志文件
         normal_log_key = f"{subdir_name}_normal"
         if normal_log_key not in self._created_handlers:
             logger.add(
-                str(log_subdir / f"test_{subdir_name}.log"),
+                str(log_subdir / f"test_{safe_subdir_name}.log"),
                 format=file_format,
                 level=log_level,
                 rotation=rotation,
@@ -160,7 +177,7 @@ class LoggerConfig:
             error_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}\n{exception}"
             
             logger.add(
-                str(log_subdir / f"test_{subdir_name}_error.log"),
+                str(log_subdir / f"test_{safe_subdir_name}_error.log"),
                 format=error_format,
                 level="ERROR",
                 rotation=rotation,
@@ -180,7 +197,7 @@ class LoggerConfig:
         
         Args:
             record: 日志记录字典
-            subdir_name: 测试子目录名称
+            subdir_name: 测试子目录名称（支持二级目录，如 "test_001/submodule_a"）
             
         Returns:
             是否来自指定的测试子目录
@@ -198,7 +215,9 @@ class LoggerConfig:
         
         # 检查模块名称是否包含测试子目录
         if 'name' in record and record['name']:
-            return f"tests.{subdir_name}" in record['name']
+            # 支持二级目录的模块名匹配
+            module_path = subdir_name.replace('/', '.')
+            return f"tests.{module_path}" in record['name']
         
         # 检查文件路径是否包含测试子目录 - 优先使用文件路径判断
         if 'file' in record and record['file']:
@@ -207,12 +226,18 @@ class LoggerConfig:
                 file_path = str(file_info.path)
             else:
                 file_path = str(file_info)
-            return f"tests{os.sep}{subdir_name}" in file_path or f"tests/{subdir_name}" in file_path
+            
+            # 支持二级目录的路径匹配
+            normalized_subdir = subdir_name.replace('/', os.sep)
+            return (f"tests{os.sep}{normalized_subdir}" in file_path or 
+                   f"tests/{subdir_name}" in file_path)
         
         # 备用检查：使用pathname属性
         if hasattr(record, 'pathname'):
             file_path = record.pathname
-            return f"tests{os.sep}{subdir_name}" in file_path or f"tests/{subdir_name}" in file_path
+            normalized_subdir = subdir_name.replace('/', os.sep)
+            return (f"tests{os.sep}{normalized_subdir}" in file_path or 
+                   f"tests/{subdir_name}" in file_path)
         
         return False
     
