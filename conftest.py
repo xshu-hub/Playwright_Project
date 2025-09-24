@@ -1,21 +1,30 @@
 """Pytest 全局配置和 Fixture 定义"""
 import pytest
-import os
 import sys
+import re
+import time
+import threading
+import os
 from datetime import datetime
 from pathlib import Path
 from playwright.sync_api import Playwright, Browser, BrowserContext, Page
 import allure
-# from loguru import logger
+import logging
 
 # 添加项目根目录到 Python 路径
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# 常量定义
+REPORTS_DIR = Path('reports')
+
 from config.env_config import config_manager, PLAYWRIGHT_CONFIG
 from utils.logger_config import logger_config
 from utils.screenshot_helper import ScreenshotHelper
-import logging
+
+# 预编译正则表达式以提高性能
+_SUBDIR_PATTERN = re.compile(r'(?:^|[/\\])tests[/\\]([^/\\]+)[/\\]')
+_NODEID_PATTERN = re.compile(r'tests[/\\]([^/\\]+)[/\\]')
 
 # 获取日志记录器
 logger = logging.getLogger(__name__)
@@ -31,21 +40,18 @@ logger_config.setup_logger(
 def pytest_configure(config):
     """pytest配置钩子 - 在测试运行前设置报告目录"""
     
-    # 固定使用reports目录
-    reports_dir = Path('reports')
-    
     # 创建固定的报告目录和子目录
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    (reports_dir / 'allure-results').mkdir(exist_ok=True)
-    (reports_dir / 'allure-report').mkdir(exist_ok=True)
-    (reports_dir / 'screenshots').mkdir(exist_ok=True)
-    (reports_dir / 'videos').mkdir(exist_ok=True)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    (REPORTS_DIR / 'allure-results').mkdir(exist_ok=True)
+    (REPORTS_DIR / 'allure-report').mkdir(exist_ok=True)
+    (REPORTS_DIR / 'screenshots').mkdir(exist_ok=True)
+    (REPORTS_DIR / 'videos').mkdir(exist_ok=True)
     
     # 将报告目录路径存储到配置中
-    config._reports_dir = reports_dir
+    config._reports_dir = REPORTS_DIR
     
     # 设置Allure报告目录
-    allure_results_dir = str(reports_dir / 'allure-results')
+    allure_results_dir = str(REPORTS_DIR / 'allure-results')
     if not hasattr(config.option, 'allure_report_dir') or not config.option.allure_report_dir:
         config.option.allure_report_dir = allure_results_dir
     
@@ -60,7 +66,7 @@ def pytest_configure(config):
         logger.warning(f"Failed to add to addopts: {e}")
     
     logger.info(f"测试开始时间: {datetime.now()}")
-    logger.info(f"当前报告目录: {reports_dir}")
+    logger.info(f"当前报告目录: {REPORTS_DIR}")
     logger.info(f"浏览器: {PLAYWRIGHT_CONFIG['default_browser']}")
     logger.info(f"无头模式: {PLAYWRIGHT_CONFIG['browser_config']['headless']}")
     logger.info("-" * 50)
@@ -93,15 +99,12 @@ def browser(playwright: Playwright):
 @pytest.fixture(scope="function")
 def context(browser: Browser, request):
     """浏览器上下文 Fixture - 使用固定reports目录"""
-    # 固定使用reports目录
-    reports_dir = Path('reports')
-    
     # 获取动态配置并设置视频录制路径
     context_config = PLAYWRIGHT_CONFIG['context_config'].copy()
     
     # 根据env_config.py的配置决定是否启用视频录制
     if config_manager.config.video_record:
-        context_config['record_video_dir'] = str(reports_dir / 'videos')
+        context_config['record_video_dir'] = str(REPORTS_DIR / 'videos')
     else:
         context_config['record_video_dir'] = None
     
@@ -126,8 +129,7 @@ def page(context: BrowserContext):
 @pytest.fixture(scope="function")
 def screenshot_helper(page: Page):
     """截图助手 Fixture"""
-    # 固定使用reports目录
-    return ScreenshotHelper(page, "reports/screenshots")
+    return ScreenshotHelper(page, str(REPORTS_DIR / "screenshots"))
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -139,9 +141,7 @@ def pytest_runtest_makereport(item, call):
     
     if rep.when == "call":
         # 获取页面对象
-        page = None
-        if hasattr(item, 'funcargs'):
-            page = item.funcargs.get('page')
+        page = _get_page_from_item(item)
         
         if rep.failed:
             logger.error(f"测试失败: {item.nodeid}")
@@ -151,9 +151,6 @@ def pytest_runtest_makereport(item, call):
                 if page and hasattr(page, 'is_closed') and not page.is_closed():
                     # 快速截图 - 添加超时控制
                     try:
-                        import time
-                        import threading
-                        
                         # 使用锁确保线程安全
                         screenshot_lock = getattr(pytest_runtest_makereport, '_screenshot_lock', None)
                         if screenshot_lock is None:
@@ -163,9 +160,18 @@ def pytest_runtest_makereport(item, call):
                         with screenshot_lock:
                             start_time = time.time()
                             
-                            # 固定使用reports目录
-                            reports_dir = Path('reports')
-                            screenshot_path = reports_dir / 'screenshots' / f"{item.nodeid.replace('::', '_').replace('/', '_')}_failure.png"
+                            # 生成时间戳
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            
+                            # 提取测试用例名（去掉路径和类名，只保留方法名）
+                            test_case_name = item.name
+                            
+                            # 使用新的命名格式：failed_测试用例名_时间戳
+                            screenshot_filename = f"failed_{test_case_name}_{timestamp}.png"
+                            screenshot_path = REPORTS_DIR / 'screenshots' / screenshot_filename
+                            
+                            # 确保截图目录存在
+                            screenshot_path.parent.mkdir(parents=True, exist_ok=True)
                             
                             # 使用超时控制截图
                             if hasattr(page, 'screenshot'):
@@ -174,10 +180,11 @@ def pytest_runtest_makereport(item, call):
                                 
                                 # 添加到Allure报告
                                 try:
-                                    import allure
                                     allure.attach.file(screenshot_path, name="失败截图", attachment_type=allure.attachment_type.PNG)
                                 except Exception as e:
                                     logger.warning(f"Allure截图附件添加失败: {e}")
+                            else:
+                                logger.warning("页面对象不支持截图功能")
                                     
                             elapsed = time.time() - start_time
                             logger.debug(f"截图处理耗时: {elapsed:.2f}秒")
@@ -214,35 +221,86 @@ def pytest_runtest_makereport(item, call):
                 logger.warning(f"视频删除标记失败: {e}")
 
 
+def _get_page_from_item(item):
+    """从测试项中安全获取页面对象的辅助函数"""
+    if hasattr(item, 'funcargs'):
+        return item.funcargs.get('page')
+    return None
+
+
+def _handle_video_for_allure(page, test_name, logger):
+    """处理失败测试的视频并添加到Allure报告"""
+    if not page or not hasattr(page, 'video') or not page.video:
+        return
+    
+    try:
+        # 等待视频文件写入完成
+        time.sleep(1)
+        
+        video_path = page.video.path()
+        if video_path and os.path.exists(video_path):
+            # 生成时间戳
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # 使用新的命名格式：failed_测试用例名_时间戳
+            new_video_name = f"failed_{test_name}_{timestamp}.webm"
+            video_dir = Path(video_path).parent
+            new_video_path = video_dir / new_video_name
+            
+            # 重命名视频文件
+            try:
+                os.rename(video_path, new_video_path)
+                logger.info(f"视频文件已重命名为: {new_video_path}")
+                video_path = new_video_path
+            except Exception as e:
+                logger.warning(f"视频文件重命名失败，使用原名称: {e}")
+            
+            with open(video_path, 'rb') as video_file:
+                allure.attach(
+                    video_file.read(),
+                    name=f"失败测试视频_{test_name}",
+                    attachment_type=allure.attachment_type.WEBM
+                )
+            logger.info(f"视频已添加到Allure报告: {video_path}")
+        else:
+            logger.warning(f"视频文件不存在或路径无效: {video_path}")
+    except Exception as e:
+        logger.error(f"添加视频到Allure报告失败: {e}")
+
+
+def _cleanup_passed_test_video(page, logger):
+    """清理通过测试的视频文件"""
+    if not page or not hasattr(page, 'video') or not page.video:
+        return
+    
+    try:
+        # 等待一小段时间确保视频文件已写入
+        time.sleep(0.5)
+        
+        video_path = page.video.path()
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
+            logger.info(f"已删除通过测试的视频文件: {video_path}")
+        else:
+            logger.debug(f"视频文件不存在，无需删除: {video_path}")
+    except Exception as e:
+        logger.error(f"删除视频文件失败: {e}")
 @pytest.fixture(autouse=True)
 def test_logger(request):
     """自动记录测试开始和结束，并处理视频清理"""
     from loguru import logger
     test_name = request.node.name
     
-    # 从测试路径中动态提取子目录名称
+    # 从测试路径中动态提取子目录名称 - 使用预编译的正则表达式
     test_path = request.node.nodeid
     subdir_name = None
     
-    # 动态获取测试子包名称
-    import re
-    # 匹配 tests/test_xxx/ 格式的路径
-    match = re.search(r'tests[/\\](test_\w+)[/\\]', test_path)
+    # 使用预编译的正则表达式匹配 tests/ 后面的子目录名称
+    # 支持任意命名的子目录，不限制于特定格式
+    # 确保匹配的是真正的tests目录（前面是路径分隔符或开头）
+    match = _SUBDIR_PATTERN.search(test_path)
     if match:
         subdir_name = match.group(1)
-    else:
-        # 如果没有匹配到子目录，尝试从文件路径中提取
-        # 匹配 test_xxx.py 格式的文件名
-        file_match = re.search(r'(test_\w+)\.py', test_path)
-        if file_match:
-            # 检查是否在tests目录的子目录中
-            path_parts = test_path.replace('\\', '/').split('/')
-            if 'tests' in path_parts:
-                tests_index = path_parts.index('tests')
-                if tests_index + 1 < len(path_parts):
-                    potential_subdir = path_parts[tests_index + 1]
-                    if potential_subdir.startswith('test_'):
-                        subdir_name = potential_subdir
     
     # 设置测试上下文，让所有日志都能路由到正确的子目录
     if subdir_name:
@@ -274,61 +332,20 @@ def test_logger(request):
         if subdir_name:
             logger_config.clear_test_context()
         
+        # 获取页面对象
+        page = _get_page_from_item(request.node)
+        
         # 处理失败测试的视频 - 添加到Allure报告
         if hasattr(request.node, '_video_for_allure') and request.node._video_for_allure:
             try:
-                # 获取页面对象
-                page = None
-                if hasattr(request.node, 'funcargs'):
-                    page = request.node.funcargs.get('page')
-                
-                if page and hasattr(page, 'video') and page.video:
-                    import time
-                    import os
-                    
-                    # 等待视频文件写入完成
-                    time.sleep(1)
-                    
-                    try:
-                        video_path = page.video.path()
-                        if video_path and os.path.exists(video_path):
-                            with open(video_path, 'rb') as video_file:
-                                allure.attach(
-                                    video_file.read(),
-                                    name=f"失败测试视频_{test_name}",
-                                    attachment_type=allure.attachment_type.WEBM
-                                )
-                            logger.info(f"视频已添加到Allure报告: {video_path}")
-                    except Exception as e:
-                        logger.error(f"添加视频到Allure报告失败: {e}")
-                        
+                _handle_video_for_allure(page, test_name, logger)
             except Exception as e:
                 logger.error(f"视频Allure处理过程出错: {e}")
         
         # 清理通过测试的视频文件
         elif hasattr(request.node, '_video_should_be_deleted') and request.node._video_should_be_deleted:
             try:
-                # 获取页面对象
-                page = None
-                if hasattr(request.node, 'funcargs'):
-                    page = request.node.funcargs.get('page')
-                
-                if page and hasattr(page, 'video') and page.video:
-                    import asyncio
-                    import os
-                    import time
-                    
-                    # 等待一小段时间确保视频文件已写入
-                    time.sleep(0.5)
-                    
-                    try:
-                        video_path = page.video.path()
-                        if video_path and os.path.exists(video_path):
-                            os.remove(video_path)
-                            logger.info(f"已删除通过测试的视频文件: {video_path}")
-                    except Exception as e:
-                        logger.error(f"删除视频文件失败: {e}")
-                        
+                _cleanup_passed_test_video(page, logger)
             except Exception as e:
                 logger.error(f"视频清理过程出错: {e}")
     
