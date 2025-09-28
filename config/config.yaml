@@ -1,5 +1,4 @@
 # Playwright 测试配置文件
-# 核心功能基础配置
 
 # 基础配置
 browser_timeout: 30000          # 浏览器超时时间(毫秒)
@@ -13,7 +12,7 @@ retry_times: 2                  # 重试次数
 
 # 浏览器配置
 browser:
-  default_browser: "chromium"     # 默认浏览器
+  default_browser: "chromium"
   supported_browsers:
     - "chromium"
     - "firefox"
@@ -24,34 +23,8 @@ browser:
     - "--disable-gpu"
     - "--disable-web-security"
     - "--allow-running-insecure-content"
-    - "--disable-features=VizDisplayCompositor"
 
 # 视窗配置
 viewport:
   width: 1920
   height: 1080
-
-# 截图配置
-screenshot:
-  path: "reports/screenshots"
-  full_page: true
-  type: "png"
-
-# 重试配置
-retry:
-  max_retries: 2
-  retry_delay: 1000               # 重试延迟(毫秒)
-  retry_on_failure: true
-
-# 日志配置
-logging:
-  level: "INFO"
-  format: "%(asctime)s | %(levelname)s | %(name)s:%(funcName)s:%(lineno)d | %(message)s"
-  file_path: "logs/test.log"
-
-# 报告配置
-reports:
-  html_report: true
-  json_report: false
-  junit_report: false
-  output_dir: "reports"

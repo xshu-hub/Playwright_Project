@@ -4,8 +4,7 @@
 1. 页面导航和等待
 2. 元素定位和操作
 3. 数据输入和验证
-4. 截图和日志记录
-5. 异常处理和重试机制
+4. 异常处理和重试机制
 """
 import time
 from abc import ABC, abstractmethod
@@ -16,7 +15,6 @@ from playwright.sync_api import Page, Locator, expect, Error, Cookie, ViewportSi
 SelectorType = Union[str, Locator]
 from loguru import logger
 
-from utils.screenshot_helper import ScreenshotHelper
 from utils.logger_config import logger_config
 
 
@@ -31,9 +29,6 @@ class BasePage(ABC):
             page: Playwright 页面实例
         """
         self.page = page
-        
-        # 固定使用reports目录
-        self.screenshot_helper = ScreenshotHelper(page, "reports/screenshots")
         self.timeout = 10000  # 默认超时时间 10 秒
         self.short_timeout = 3000  # 短超时时间 3 秒
         self.long_timeout = 30000  # 长超时时间 30 秒
@@ -71,7 +66,7 @@ class BasePage(ABC):
             return self
         except Exception as e:
             logger.error(f"❌ 页面导航失败: {target_url} | 错误: {str(e)}")
-            self.screenshot_helper.take_failure_screenshot("navigation_failed", str(e))
+            # 移除重复截图，让全局截图机制处理测试失败的截图
             raise
     
     def wait_for_page_load(self, timeout: Optional[int] = None) -> None:
@@ -126,6 +121,22 @@ class BasePage(ABC):
             logger.error(f"获取元素失败: {selector_desc}, 错误: {str(e)}")
             raise
     
+    def _log_element_action(self, action: str, selector: SelectorType, value: str = "") -> str:
+        """
+        记录元素操作日志的通用方法
+        
+        Args:
+            action: 操作类型
+            selector: 元素选择器
+            value: 操作值
+            
+        Returns:
+            选择器描述字符串
+        """
+        selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
+        logger_config.log_page_action(action, selector_desc, value)
+        return selector_desc
+    
     def click(self, selector: SelectorType, timeout: Optional[int] = None, force: bool = False) -> 'BasePage':
         """
         点击元素
@@ -139,8 +150,7 @@ class BasePage(ABC):
             页面实例
         """
         timeout = timeout or self.timeout
-        selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
-        logger_config.log_page_action("点击", selector_desc)
+        selector_desc = self._log_element_action("点击", selector)
         
         try:
             element = self.get_element(selector, timeout)
@@ -149,7 +159,7 @@ class BasePage(ABC):
             return self
         except Exception as e:
             logger.error(f"❌ 元素点击失败: {selector_desc} | 错误: {str(e)}")
-            self.screenshot_helper.take_failure_screenshot("click_failed", str(e))
+            # 移除重复截图，让全局截图机制处理测试失败的截图
             raise
     
     def double_click(self, selector: SelectorType, timeout: Optional[int] = None) -> 'BasePage':
@@ -614,19 +624,6 @@ class BasePage(ABC):
             logger.error(f"执行脚本失败: {script[:100]}..., 错误: {str(e)}")
             raise
     
-    def take_screenshot(self, filename: Optional[str] = None, description: str = "") -> Optional[str]:
-        """
-        截取页面截图
-        
-        Args:
-            filename: 文件名
-            description: 截图描述
-            
-        Returns:
-            截图文件路径
-        """
-        return self.screenshot_helper.take_screenshot(filename, description)
-    
     def wait(self, seconds: float) -> 'BasePage':
         """
         等待指定时间
@@ -671,32 +668,20 @@ class BasePage(ABC):
             
             time.sleep(poll_interval)
     
-    def wait_for_network_idle(self, timeout: Optional[int] = None, idle_time: int = 500) -> 'BasePage':
+    def wait_for_network_idle(self, timeout: Optional[int] = None) -> 'BasePage':
         """
         等待网络空闲
         
         Args:
             timeout: 超时时间
-            idle_time: 空闲时间(毫秒)
             
         Returns:
             页面实例
         """
         timeout = timeout or self.long_timeout
         try:
-            # 使用 idle_time 参数来等待网络空闲
-            import time
-            start_time = time.time() * 1000
-            while (time.time() * 1000 - start_time) < timeout:
-                try:
-                    # 等待网络空闲状态，使用 idle_time 作为空闲判断时间
-                    self.page.wait_for_load_state("networkidle", timeout=idle_time)
-                    logger.debug(f"网络已空闲 (空闲时间: {idle_time}ms)")
-                    return self
-                except (Error, TimeoutError):
-                    # 如果在 idle_time 内没有达到空闲状态，继续等待
-                    time.sleep(0.1)
-            logger.warning(f"等待网络空闲超时: {timeout}ms")
+            self.page.wait_for_load_state("networkidle", timeout=timeout)
+            logger.debug("网络已空闲")
             return self
         except Exception as e:
             logger.warning(f"等待网络空闲超时: {str(e)}")
@@ -819,15 +804,9 @@ class BasePage(ABC):
         Returns:
             元素数量
         """
-        timeout = timeout or self.timeout
+        timeout = timeout or self.short_timeout  # 使用短超时，因为只是计数
         try:
             locator = self._resolve_selector(selector)
-            # 使用 timeout 参数等待至少一个元素出现，然后获取数量
-            try:
-                locator.first.wait_for(state="attached", timeout=timeout)
-            except (Error, TimeoutError):
-                # 如果没有元素，返回 0
-                pass
             count = locator.count()
             selector_desc = str(selector) if isinstance(selector, str) else f"Locator({selector})"
             logger.debug(f"元素数量 {selector_desc}: {count}")
@@ -887,7 +866,7 @@ class BasePage(ABC):
             return self
         except Exception as e:
             logger.error(f"拖拽操作失败: {str(e)}")
-            self.take_screenshot(f"drag_drop_error_{int(time.time())}")
+            # 移除重复截图，让全局截图机制处理测试失败的截图
             raise
     
     def upload_file(self, selector: SelectorType, file_path: str, timeout: Optional[int] = None) -> 'BasePage':
@@ -912,7 +891,7 @@ class BasePage(ABC):
             return self
         except Exception as e:
             logger.error(f"文件上传失败: {str(e)}")
-            self.take_screenshot(f"upload_error_{int(time.time())}")
+            # 移除重复截图，让全局截图机制处理测试失败的截图
             raise
     
     def switch_to_frame(self, frame_selector: SelectorType, timeout: Optional[int] = None) -> FrameLocator:
@@ -920,29 +899,31 @@ class BasePage(ABC):
         切换到iframe
         
         Args:
-            frame_selector: iframe选择器（字符串或Playwright内置选择器）
+            frame_selector: iframe选择器（字符串选择器）
             timeout: 超时时间(毫秒)
             
         Returns:
-            iframe页面对象
+            iframe定位器
         """
         timeout = timeout or self.timeout
         try:
-            selector_desc = str(frame_selector) if isinstance(frame_selector, str) else f"Locator({frame_selector})"
-            logger.info(f"切换到iframe: {selector_desc}")
-            
             # 先等待iframe元素可见
             self.wait_for_element(frame_selector, timeout=timeout)
             
-            # 使用page.frame_locator来获取frame
+            # 获取选择器字符串
             if isinstance(frame_selector, str):
-                frame_locator = self.page.frame_locator(frame_selector)
+                selector_str = frame_selector
             else:
-                # 如果是Locator对象，先获取其选择器字符串
-                frame_locator = self.page.frame_locator(str(frame_selector))
+                # 如果是Locator对象，需要转换为字符串（这里简化处理）
+                selector_str = str(frame_selector)
             
-            # 返回frame的第一个frame对象
-            return frame_locator.first
+            selector_desc = selector_str
+            logger.info(f"切换到iframe: {selector_desc}")
+            
+            # 使用page.frame_locator来获取frame
+            frame_locator = self.page.frame_locator(selector_str)
+            return frame_locator
+            
         except Exception as e:
             logger.error(f"切换iframe失败: {str(e)}")
             raise
@@ -1045,7 +1026,7 @@ class BasePage(ABC):
             logger.error(f"设置视口大小失败: {str(e)}")
             return self
     
-    def get_viewport_size(self) -> ViewportSize:
+    def get_viewport_size(self) -> Dict[str, int]:
         """
         获取视口大小
         
@@ -1059,3 +1040,215 @@ class BasePage(ABC):
         except Exception as e:
             logger.error(f"获取视口大小失败: {str(e)}")
             return {'width': 0, 'height': 0}
+
+    def click_and_wait_for_new_tab(self, selector: SelectorType, timeout: Optional[int] = None) -> Page:
+        """
+        点击元素并等待新标签页打开
+        
+        Args:
+            selector: 要点击的元素选择器
+            timeout: 等待超时时间
+            
+        Returns:
+            新打开的页面对象
+            
+        Raises:
+            TimeoutError: 等待新标签页超时
+            Exception: 点击操作失败
+        """
+        timeout = timeout or self.timeout
+        logger_config.log_page_action("点击并等待新标签页", str(selector))
+        
+        try:
+            # 监听新页面事件
+            with self.page.context.expect_page(timeout=timeout) as new_page_info:
+                # 执行点击操作
+                element = self._resolve_selector(selector)
+                element.click()
+            
+            # 获取新页面
+            new_page = new_page_info.value
+            
+            # 等待新页面加载完成
+            new_page.wait_for_load_state("domcontentloaded", timeout=timeout)
+            
+            logger.info(f"✅ 成功打开新标签页: {new_page.url}")
+            return new_page
+            
+        except Exception as e:
+            logger.error(f"❌ 点击并等待新标签页失败: {str(e)}")
+            # 移除重复截图，让全局截图机制处理测试失败的截图
+            raise
+
+    def switch_to_new_tab(self, action_callback: Callable[[], None], timeout: Optional[int] = None) -> Page:
+        """
+        执行操作并切换到新打开的标签页
+        
+        Args:
+            action_callback: 触发新标签页的操作回调函数
+            timeout: 等待超时时间
+            
+        Returns:
+            新打开的页面对象
+            
+        Example:
+            # 点击链接打开新标签页
+            new_page = base_page.switch_to_new_tab(
+                lambda: base_page.click("a[target='_blank']")
+            )
+        """
+        timeout = timeout or self.timeout
+        logger_config.log_page_action("执行操作并切换到新标签页", "")
+        
+        try:
+            # 监听新页面事件
+            with self.page.context.expect_page(timeout=timeout) as new_page_info:
+                # 执行触发新标签页的操作
+                action_callback()
+            
+            # 获取新页面
+            new_page = new_page_info.value
+            
+            # 等待新页面加载完成
+            new_page.wait_for_load_state("domcontentloaded", timeout=timeout)
+            
+            logger.info(f"✅ 成功切换到新标签页: {new_page.url}")
+            return new_page
+            
+        except Exception as e:
+            logger.error(f"❌ 切换到新标签页失败: {str(e)}")
+            # 移除重复截图，让全局截图机制处理测试失败的截图
+            raise
+
+    def get_all_pages(self) -> List[Page]:
+        """
+        获取当前浏览器上下文中的所有页面
+        
+        Returns:
+            页面列表
+        """
+        try:
+            pages = self.page.context.pages
+            logger.info(f"📄 当前共有 {len(pages)} 个页面")
+            for i, page in enumerate(pages):
+                logger.debug(f"  页面 {i}: {page.url}")
+            return pages
+        except Exception as e:
+            logger.error(f"❌ 获取所有页面失败: {str(e)}")
+            return []
+
+    def switch_to_page_by_url(self, url_pattern: str) -> Optional[Page]:
+        """
+        根据URL模式切换到指定页面
+        
+        Args:
+            url_pattern: URL模式（支持通配符）
+            
+        Returns:
+            匹配的页面对象，如果未找到则返回None
+        """
+        try:
+            pages = self.get_all_pages()
+            for page in pages:
+                if url_pattern in page.url or self._match_url_pattern(page.url, url_pattern):
+                    logger.info(f"🔄 切换到页面: {page.url}")
+                    return page
+            
+            logger.warning(f"⚠️ 未找到匹配URL模式的页面: {url_pattern}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"❌ 切换页面失败: {str(e)}")
+            return None
+
+    def switch_to_page_by_title(self, title_pattern: str) -> Optional[Page]:
+        """
+        根据标题模式切换到指定页面
+        
+        Args:
+            title_pattern: 标题模式
+            
+        Returns:
+            匹配的页面对象，如果未找到则返回None
+        """
+        try:
+            pages = self.get_all_pages()
+            for page in pages:
+                page_title = page.title()
+                if title_pattern in page_title:
+                    logger.info(f"🔄 切换到页面: {page_title} ({page.url})")
+                    return page
+            
+            logger.warning(f"⚠️ 未找到匹配标题模式的页面: {title_pattern}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"❌ 根据标题切换页面失败: {str(e)}")
+            return None
+
+    def close_other_pages(self, keep_current: bool = True) -> None:
+        """
+        关闭其他页面，只保留当前页面或指定页面
+        
+        Args:
+            keep_current: 是否保留当前页面
+        """
+        try:
+            pages = self.get_all_pages()
+            current_page = self.page if keep_current else None
+            
+            closed_count = 0
+            for page in pages:
+                if page != current_page:
+                    try:
+                        page.close()
+                        closed_count += 1
+                        logger.debug(f"🗑️ 已关闭页面: {page.url}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ 关闭页面失败: {page.url} | {str(e)}")
+            
+            logger.info(f"✅ 已关闭 {closed_count} 个页面")
+            
+        except Exception as e:
+            logger.error(f"❌ 关闭其他页面失败: {str(e)}")
+
+    def wait_for_new_page(self, timeout: Optional[int] = None) -> Page:
+        """
+        等待新页面打开（不执行任何操作，只是等待）
+        
+        Args:
+            timeout: 等待超时时间
+            
+        Returns:
+            新打开的页面对象
+        """
+        timeout = timeout or self.timeout
+        logger_config.log_page_action("等待新页面打开", "")
+        
+        try:
+            with self.page.context.expect_page(timeout=timeout) as new_page_info:
+                pass  # 只等待，不执行任何操作
+            
+            new_page = new_page_info.value
+            new_page.wait_for_load_state("domcontentloaded", timeout=timeout)
+            
+            logger.info(f"✅ 检测到新页面: {new_page.url}")
+            return new_page
+            
+        except Exception as e:
+            logger.error(f"❌ 等待新页面超时: {str(e)}")
+            raise
+
+    def _match_url_pattern(self, url: str, pattern: str) -> bool:
+        """
+        匹配URL模式（简单的通配符支持）
+        
+        Args:
+            url: 实际URL
+            pattern: URL模式
+            
+        Returns:
+            是否匹配
+        """
+        import fnmatch
+        return fnmatch.fnmatch(url, pattern)

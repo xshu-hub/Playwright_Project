@@ -14,11 +14,11 @@ pytest-rerunfailures
 
 # Logging and utilities
 loguru
-pydantic>=2.0.0
+pydantic
 
 # Data handling
 pytest-mock
-PyYAML>=6.0
+PyYAML
 faker
 
 # Configuration and environment

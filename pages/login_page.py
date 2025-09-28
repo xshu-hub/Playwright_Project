@@ -34,10 +34,12 @@ class LoginPage(BasePage):
         self.login_form = "#loginForm"
         self.demo_accounts_section = ".demo-accounts"
         
-    def navigate(self):
+    def navigate(self, url: str = None):
         """导航到登录页面"""
-        super().navigate(self.url)
-        self.wait_for_page_load()
+        target_url = url or self.url
+        super().navigate(target_url)
+        if not url:  # 只有导航到默认URL时才等待页面加载
+            self.wait_for_page_load()
         
     def wait_for_page_load(self):
         """等待页面加载完成"""
@@ -110,7 +112,7 @@ class LoginPage(BasePage):
         
     def is_login_button_loading(self) -> bool:
         """检查登录按钮是否处于加载状态"""
-        return self.is_element_visible(self.loading_state)
+        return self.is_visible(self.loading_state)
         
     def is_remember_login_checked(self) -> bool:
         """检查记住登录复选框是否被勾选"""
